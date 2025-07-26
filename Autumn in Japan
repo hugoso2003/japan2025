@@ -3,444 +3,315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Guide to Japanese Beverages</title>
+    <title>Interactive Guide to Autumn in Japan 2025</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Serene Stone -->
-    <!-- Application Structure Plan: The SPA is designed with a user-centric, task-oriented flow, prioritizing exploration over a linear report structure. The information architecture is split into two primary, thematic sections: "Tea" and "Alcohol," accessible via a persistent top navigation. This binary choice simplifies the initial user decision. Within each section, a secondary navigation allows users to select specific beverage types (e.g., Matcha, Sake). This triggers a dynamic update in the main content area, displaying a detailed "fact card" for the selected item. This card includes descriptions, key attributes, and an interactive Chart.js visualization for price comparison. This structure was chosen for its intuitiveness and scalability. It allows users to quickly compare items within a category or switch contexts seamlessly, making the dense information from the report digestible and engaging. The flow is designed for discovery, encouraging users to click and explore rather than read passively. -->
-    <!-- Visualization & Content Choices: The core goal is to make data comparison intuitive. For this, Chart.js was chosen. Report Info: Beverage price ranges. -> Goal: Compare cost. -> Viz: A horizontal bar chart. -> Interaction: The chart dynamically updates when a new beverage is selected, showing its min/max price against the average of its peers. -> Justification: A bar chart is instantly readable for comparing quantitative values. Report Info: Sake grade characteristics (rich, aromatic, etc.). -> Goal: Compare qualitative attributes. -> Viz: A radar chart. -> Interaction: Updates on sake grade selection. -> Justification: A radar chart effectively displays multi-axial qualitative data, offering a holistic "shape" of each grade's profile. Textual content is organized into cards and expandable accordions to manage information density, revealing details on demand. This approach, using Canvas-based charts and structured HTML, avoids SVG/Mermaid as required and supports the interactive, explorative design. -->
+    <!-- Chosen Palette: Autumn Harmony -->
+    <!-- Application Structure Plan: The SPA is designed around a thematic, non-linear user flow to make the dense report data digestible. A persistent top navigation bar with icons (Plan, Koyo, Culture, Art, Taste) allows users to jump between key themes instantly. This task-oriented structure was chosen over a linear chapter format for better usability, allowing users to explore based on their immediate interests (e.g., finding a festival date or checking packing tips). Each section features interactive cards that reveal detailed information on click, preventing overwhelming walls of text. Dynamic Chart.js visualizations are integrated to compare quantitative data like prices and timelines, offering quick insights. The user flow encourages exploration and comparison, transforming the static report into a practical trip-planning tool. -->
+    <!-- Visualization & Content Choices: Report Info: Festival ticket prices (Jidai Matsuri, Kurama, Noh). -> Goal: Compare costs. -> Viz: A dynamic bar chart. -> Interaction: The chart updates when a new section is selected, showing relevant costs. -> Justification: Bar charts are excellent for direct value comparison. Report Info: Foliage peak times across different regions (Hokkaido, Nikko, Tokyo, Kyoto). -> Goal: Show seasonal progression. -> Viz: A horizontal bar chart acting as a timeline. -> Interaction: Users can visually track the "koyo front" from north to south. -> Justification: This visual timeline makes complex date ranges intuitive. Report Info: Itineraries. -> Goal: Organize complex plans. -> Viz: Accordion-style HTML/CSS layout. -> Interaction: Users click to expand and view day-by-day details. -> Justification: Manages information density effectively. All visualizations use Chart.js (Canvas), and all diagrams use structured HTML/CSS, adhering to the NO SVG/Mermaid constraint. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
-        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #F5F5F4; /* stone-100 */ }
-        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 250px; max-height: 300px; }
-        @media (min-width: 768px) { .chart-container { height: 300px; max-height: 350px; } }
-        .nav-btn-active { background-color: #A16207; /* yellow-700 */ color: white; }
-        .sub-nav-btn-active { background-color: #D6D3D1; /* stone-300 */ color: #1C1917; /* stone-900 */ }
-        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background-color: #FEFCE8; /* yellow-50 */ color: #3F3F46; /* zinc-700 */ }
+        .nav-btn { transition: all 0.3s ease; }
+        .nav-btn.active { background-color: #D97706; /* amber-600 */ color: white; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .content-section { display: none; }
+        .content-section.active { display: block; animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background-color: white; border-radius: 0.75rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease; border: 1px solid #F5F5F4; /* stone-100 */ }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+        .accordion-content { max-height: 0; overflow: hidden; transition: max-height 0.5s ease-in-out; }
+        .details-card summary { cursor: pointer; }
+        .chart-container { position: relative; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; max-height: 450px; } }
     </style>
 </head>
-<body class="bg-stone-100 text-stone-800">
+<body class="antialiased">
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-
-        <header class="text-center mb-8">
-            <h1 class="text-4xl md:text-5xl font-bold text-stone-900 mb-2">日本の飲み物の世界</h1>
-            <h2 class="text-2xl md:text-3xl font-bold text-yellow-800 mb-4">An Interactive Guide to Japanese Beverages</h2>
-            <p class="max-w-3xl mx-auto text-stone-600">
-                Explore the rich tapestry of Japan's liquid culture, from the serene traditions of tea to the celebrated craftsmanship of its spirits. Select a category to begin your journey.
-            </p>
+    <div class="container mx-auto p-4 md:p-6 max-w-7xl">
+        <header class="text-center mb-6 md:mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-amber-800 mb-2">Autumn in Japan 2025</h1>
+            <p class="text-lg text-zinc-600">An Interactive Journey Through Koyo, Culture & Culinary Delights</p>
         </header>
 
-        <nav class="flex justify-center bg-stone-200 p-2 rounded-lg shadow-md mb-8 sticky top-4 z-10">
-            <button id="nav-tea" class="nav-btn text-lg font-semibold py-2 px-6 rounded-md transition-colors duration-300">🍵 日本茶 (Tea)</button>
-            <button id="nav-alcohol" class="nav-btn text-lg font-semibold py-2 px-6 rounded-md transition-colors duration-300 ml-4">🍶 お酒 (Alcohol)</button>
+        <nav id="main-nav" class="flex flex-wrap justify-center gap-2 md:gap-4 bg-white/80 backdrop-blur-sm p-3 rounded-xl shadow-md mb-8 sticky top-4 z-50">
+            <button data-target="planning" class="nav-btn flex items-center gap-2 py-2 px-4 rounded-lg font-semibold">📋<span class="hidden md:inline"> Plan</span></button>
+            <button data-target="koyo" class="nav-btn flex items-center gap-2 py-2 px-4 rounded-lg font-semibold">🍁<span class="hidden md:inline"> Koyo</span></button>
+            <button data-target="culture" class="nav-btn flex items-center gap-2 py-2 px-4 rounded-lg font-semibold">🏮<span class="hidden md:inline"> Culture</span></button>
+            <button data-target="art" class="nav-btn flex items-center gap-2 py-2 px-4 rounded-lg font-semibold">🎨<span class="hidden md:inline"> Art</span></button>
+            <button data-target="culinary" class="nav-btn flex items-center gap-2 py-2 px-4 rounded-lg font-semibold">🍜<span class="hidden md:inline"> Taste</span></button>
+            <button data-target="itinerary" class="nav-btn flex items-center gap-2 py-2 px-4 rounded-lg font-semibold">🗺️<span class="hidden md:inline"> Itineraries</span></button>
         </nav>
 
-        <main id="main-content">
-            
-            <section id="tea-section">
-                <div id="tea-sub-nav" class="flex flex-wrap justify-center gap-2 mb-8"></div>
-                <div id="tea-display" class="bg-white p-6 rounded-xl shadow-lg transition-opacity duration-500"></div>
+        <main id="app-content">
+            <!-- Planning Section -->
+            <section id="planning-section" class="content-section">
+                <h2 class="text-3xl font-bold text-center mb-6 text-amber-700">Preparing Your Autumn Escape</h2>
+                <p class="text-center max-w-3xl mx-auto mb-8 text-zinc-600">This section provides essential information for planning your trip, from understanding the climate to packing smart. Autumn is a peak season for foliage, so early booking for flights and accommodation is critical for the best options and prices.</p>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="card p-6">
+                        <h3 class="text-xl font-bold mb-3">🍂 Climate Overview</h3>
+                        <p class="mb-4">Mid-Oct to late-Nov offers mild weather, perfect for exploring. Expect daytime highs around 17°C (62.6°F) and nighttime lows of 8-9°C (48.2°F) in central Japan. Be aware of significant regional variations:</p>
+                        <ul class="list-disc list-inside space-y-2 text-zinc-600">
+                            <li><strong>Central (Tokyo/Kyoto):</strong> Mild and pleasant.</li>
+                            <li><strong>North (Hokkaido):</strong> Colder, with highs below 10°C and possible first snow.</li>
+                            <li><strong>South (Okinawa):</strong> Warmer, with lows around 21°C.</li>
+                        </ul>
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="text-xl font-bold mb-3">🧳 Essential Packing Tips</h3>
+                        <p class="mb-4">Layering is key. Pack a versatile wardrobe to adapt to changing temperatures and regional climates.</p>
+                        <ul class="list-disc list-inside space-y-2 text-zinc-600">
+                            <li><strong>Must-haves:</strong> Lightweight jacket, sweaters, scarf, gloves, and comfortable walking shoes.</li>
+                            <li><strong>Cultural Tip:</strong> Bring shoes that are easy to slip on/off and hole-free socks for entering traditional establishments.</li>
+                            <li><strong>For Hokkaido:</strong> Pack thermal wear, a winter coat, and slip-resistant shoes.</li>
+                        </ul>
+                    </div>
+                </div>
             </section>
 
-            <section id="alcohol-section" class="hidden">
-                <div id="alcohol-sub-nav" class="flex flex-wrap justify-center gap-2 mb-8"></div>
-                <div id="alcohol-display" class="bg-white p-6 rounded-xl shadow-lg transition-opacity duration-500"></div>
+            <!-- Koyo Section -->
+            <section id="koyo-section" class="content-section">
+                <h2 class="text-3xl font-bold text-center mb-6 text-amber-700">The Spectacle of Koyo (Fall Foliage)</h2>
+                <p class="text-center max-w-3xl mx-auto mb-8 text-zinc-600">Japan's autumn colors are a breathtaking sight. This section guides you to the best viewing spots, from serene city gardens to epic natural landscapes. The foliage peak moves from north to south, starting as early as September in Hokkaido and reaching Tokyo in late November.</p>
+                <div class="card p-6 mb-8">
+                    <h3 class="text-xl font-bold mb-3 text-center">Koyo Peak Season Timeline</h3>
+                    <div class="chart-container">
+                        <canvas id="koyo-timeline-chart"></canvas>
+                    </div>
+                </div>
+                <div id="koyo-cards" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- Culture Section -->
+            <section id="culture-section" class="content-section">
+                <h2 class="text-3xl font-bold text-center mb-6 text-amber-700">Cultural Immersion</h2>
+                 <p class="text-center max-w-3xl mx-auto mb-8 text-zinc-600">Autumn is rich with cultural festivals and traditional performances. Experience the vibrant history and artistry of Japan through these unique events. Booking tickets and accommodation well in advance is highly recommended for popular festivals.</p>
+                <div id="culture-cards" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </section>
+
+            <!-- Art Section -->
+            <section id="art-section" class="content-section">
+                <h2 class="text-3xl font-bold text-center mb-6 text-amber-700">Art & Innovation</h2>
+                <p class="text-center max-w-3xl mx-auto mb-8 text-zinc-600">Tokyo's dynamic art scene comes alive in autumn. Explore everything from major contemporary art weeks to groundbreaking digital installations. Check official websites for the most current schedules and ticketing information.</p>
+                <div id="art-cards" class="grid md:grid-cols-2 gap-6"></div>
+            </section>
+
+            <!-- Culinary Section -->
+            <section id="culinary-section" class="content-section">
+                <h2 class="text-3xl font-bold text-center mb-6 text-amber-700">A Culinary Journey</h2>
+                <p class="text-center max-w-3xl mx-auto mb-8 text-zinc-600">Autumn is a feast for the senses, bringing a bounty of seasonal ingredients. This section highlights the must-try flavors and unique dining experiences, from revered matsutake mushrooms to lively ramen festivals.</p>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="card p-6 col-span-full">
+                        <h3 class="text-xl font-bold mb-3">🍂 Autumnal Flavors</h3>
+                        <p class="mb-4">Seek out these seasonal delicacies:</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-amber-100 text-amber-800 py-1 px-3 rounded-full font-medium">Matsutake Mushrooms</span>
+                            <span class="bg-amber-100 text-amber-800 py-1 px-3 rounded-full font-medium">Sanma (Pacific Saury)</span>
+                            <span class="bg-amber-100 text-amber-800 py-1 px-3 rounded-full font-medium">Kuri (Chestnuts)</span>
+                            <span class="bg-amber-100 text-amber-800 py-1 px-3 rounded-full font-medium">Ginnan (Ginkgo Nuts)</span>
+                            <span class="bg-amber-100 text-amber-800 py-1 px-3 rounded-full font-medium">Kaki (Persimmon)</span>
+                            <span class="bg-amber-100 text-amber-800 py-1 px-3 rounded-full font-medium">Satsumaimo (Sweet Potato)</span>
+                        </div>
+                    </div>
+                </div>
+                 <div id="culinary-cards" class="grid md:grid-cols-2 gap-6 mt-6"></div>
+            </section>
+            
+            <!-- Itinerary Section -->
+            <section id="itinerary-section" class="content-section">
+                <h2 class="text-3xl font-bold text-center mb-6 text-amber-700">Sample Itineraries</h2>
+                <p class="text-center max-w-3xl mx-auto mb-8 text-zinc-600">Use these sample itineraries as a starting point to build your perfect autumn journey. They are designed to balance iconic sights with unique seasonal experiences, following the natural progression of fall colors from north to south.</p>
+                <div id="itinerary-cards" class="space-y-6"></div>
             </section>
 
         </main>
-
-        <footer class="mt-12 text-center text-stone-500">
-            <div class="bg-white p-6 rounded-xl shadow-lg">
-                <h3 class="text-2xl font-bold text-stone-800 mb-4">文化的な洞察 (Cultural Insights)</h3>
-                <div class="text-left max-w-2xl mx-auto space-y-4">
-                    <div>
-                        <h4 class="font-semibold text-lg text-yellow-800">Pouring Etiquette (お酌 - Oshaku)</h4>
-                        <p>In Japan, it's customary to pour drinks for others but not for yourself, especially in formal or group settings. This act, called 'oshaku', fosters camaraderie and respect. Always be mindful to refill the glasses of your companions when they are getting low.</p>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold text-lg text-yellow-800">The Toast (乾杯 - Kanpai!)</h4>
-                        <p>The universal toast is "Kanpai!" which translates to "empty cup" or "cheers!". Wait until everyone has a drink and raises their glass before taking your first sip.</p>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold text-lg text-yellow-800">The Tea Ceremony (茶道 - Sadō)</h4>
-                        <p>The Japanese tea ceremony is a highly ritualized and meditative practice centered on the preparation and presentation of matcha. It embodies principles of harmony (和), respect (敬), purity (清), and tranquility (寂). If you attend one, observe quietly and follow the host's lead.</p>
-                    </div>
-                </div>
-            </div>
-            <p class="mt-8 text-sm">Interactive guide created based on the "Comprehensive Guide to Japanese Beverages".</p>
-        </footer>
-
     </div>
 
-    <script>
-        const beverageData = {
-            teas: [
-                { id: 'matcha', name: 'Matcha', jp_name: '抹茶', price: [700, 12800], caffeine: 'High', temp: '70-80°C', flavor: 'Umami, sweet, vegetal', desc: 'A finely ground powder of specially grown green tea leaves. The entire leaf is consumed, offering a rich, complex flavor and a vibrant green color. It is the centerpiece of the traditional Japanese tea ceremony.', details: 'Matcha is graded into "ceremonial" for drinking and "culinary" for cooking. High-quality matcha is never bitter and boasts a deep, savory umami note balanced by a natural sweetness.' },
-                { id: 'sencha', name: 'Sencha', jp_name: '煎茶', price: [1200, 4860], caffeine: 'Medium', temp: '70-80°C', flavor: 'Grassy, refreshing, astringent', desc: 'The most popular tea in Japan. The leaves are steamed after harvesting to prevent oxidation, resulting in a refreshing and vibrant flavor profile with a pleasant, subtle bitterness.', details: 'Sencha quality varies greatly depending on the harvest season. The first flush of spring ("shincha") is the most prized for its delicate flavor and sweetness.' },
-                { id: 'genmaicha', name: 'Genmaicha', jp_name: '玄米茶', price: [500, 1200], caffeine: 'Low', temp: '80-90°C', flavor: 'Nutty, toasty, comforting', desc: 'A blend of green tea (often Bancha or Sencha) with roasted brown rice. Some rice grains pop during roasting, resembling popcorn. It has a comforting, savory aroma.', details: 'The roasted rice balances the astringency of the green tea, creating a smooth and easy-to-drink beverage. Its lower caffeine content makes it a popular choice for any time of day.' },
-                { id: 'hojicha', name: 'Hojicha', jp_name: 'ほうじ茶', price: [600, 1200], caffeine: 'Low', temp: '90-100°C', flavor: 'Smoky, caramel-like, earthy', desc: 'Made by roasting green tea leaves (typically Bancha) over charcoal, which gives it a reddish-brown color and a distinctively smoky, nutty flavor.', details: 'The roasting process significantly reduces the tea\'s caffeine content, making it a favorite for children and for drinking in the evening. It has a warming, soothing quality.' },
-                { id: 'gyokuro', name: 'Gyokuro', jp_name: '玉露', price: [2000, 6000], caffeine: 'High', temp: '50-60°C', flavor: 'Intense umami, sweet, rich', desc: 'A premium, shade-grown green tea. Shielding the plants from sunlight for about three weeks before harvest boosts chlorophyll and L-theanine levels, creating a profound umami flavor.', details: 'Gyokuro is brewed at a much lower temperature to draw out its signature sweetness and avoid bitterness. It has a thick, almost soupy texture and a lingering, savory aftertaste.' },
-                { id: 'bancha', name: 'Bancha', jp_name: '番茶', price: [400, 1000], caffeine: 'Low', temp: '80-90°C', flavor: 'Robust, slightly bitter', desc: 'A common, everyday tea made from coarser, more mature leaves harvested later in the season. It has a more robust and less delicate flavor than Sencha.', details: 'Bancha is often used as the base for Genmaicha and Hojicha. It is an affordable and accessible tea enjoyed by many households across Japan.' },
-            ],
-            alcohols: [
-                { id: 'sake', name: 'Sake', jp_name: '日本酒', desc: 'Japan\'s national beverage, brewed from fermented rice. Its complexity rivals that of wine, with a vast spectrum of flavors, aromas, and serving temperatures. The quality is heavily influenced by the rice polishing ratio, water source, and the brewer\'s skill.', grades: [
-                    { id: 'daiginjo', name: 'Daiginjo (大吟醸)', price: [2800, 55000], polishing: '<50%', flavor: 'Highly refined, complex, aromatic, often fruity or floral.', stats: { aroma: 9, body: 4, complexity: 9, sweetness: 5 } },
-                    { id: 'ginjo', name: 'Ginjo (吟醸)', price: [2000, 5000], polishing: '<60%', flavor: 'Fruity, floral, and aromatic. A broader and more accessible style than Daiginjo.', stats: { aroma: 7, body: 5, complexity: 7, sweetness: 6 } },
-                    { id: 'junmai', name: 'Junmai (純米)', price: [1200, 3000], polishing: 'N/A', flavor: 'Rich, full-bodied, and savory with noticeable umami. "Pure rice" sake with no added alcohol.', stats: { aroma: 4, body: 8, complexity: 6, sweetness: 4 } },
-                    { id: 'honjozo', name: 'Honjozo (本醸造)', price: [1500, 3000], polishing: '<70%', flavor: 'Lighter, drier, and smoother. A small amount of brewer\'s alcohol is added to lighten the profile.', stats: { aroma: 5, body: 6, complexity: 5, sweetness: 3 } },
-                ]},
-                { id: 'whisky', name: 'Whisky', jp_name: 'ウイスキー', price: [4500, 100000], desc: 'Japanese whisky has gained global acclaim for its meticulous craftsmanship and balanced, complex profiles. Distilleries like Yamazaki and Yoichi are legendary, producing world-class single malts and blends that often rival their Scottish counterparts.', details: 'Styles range from smoky and peated (similar to Islay Scotch) to light and floral. The attention to detail in blending is a key characteristic of the industry.' },
-                { id: 'beer', name: 'Beer', jp_name: 'ビール', price: [210, 800], desc: 'The beer market is dominated by crisp, clean lagers from giants like Asahi, Kirin, and Sapporo, which pair perfectly with Japanese food. However, a vibrant craft beer scene has exploded, offering a huge variety of styles from IPAs to stouts.', details: 'Look for "ji-biru" (地ビール), or local craft beer, in specialty bars and bottle shops for unique flavors often using local ingredients like yuzu or sansho pepper.' },
-                { id: 'shochu', name: 'Shochu', jp_name: '焼酎', price: [1200, 4500], desc: 'A versatile distilled spirit, typically stronger than sake. It can be made from various ingredients like barley (mugi), sweet potato (imo), rice (kome), or brown sugar, each imparting a unique flavor.', details: 'Shochu can be enjoyed in many ways: neat, on the rocks, or mixed with hot water (oyuwari) or cold water (mizuwari). Imo shochu has a distinct earthy, robust flavor, while mugi shochu is often smoother and lighter.' },
-                { id: 'umeshu', name: 'Umeshu', jp_name: '梅酒', price: [1800, 4990], desc: 'A popular sweet and tart liqueur made by steeping unripe ume plums in alcohol (usually shochu) and sugar. It\'s a refreshing and easy-to-drink beverage enjoyed by many.', details: 'Enjoy it straight, on the rocks, or mixed with soda water ("umeshu soda"). Many households make their own umeshu, with recipes passed down through generations.' },
-            ]
-        };
-
-        let priceChart = null;
-        let sakeRadarChart = null;
-        let currentState = {
-            category: 'tea',
-            selectedItemId: 'matcha',
-            selectedSakeGradeId: 'daiginjo'
-        };
-
-        const navTea = document.getElementById('nav-tea');
-        const navAlcohol = document.getElementById('nav-alcohol');
-        const teaSection = document.getElementById('tea-section');
-        const alcoholSection = document.getElementById('alcohol-section');
-        const teaSubNav = document.getElementById('tea-sub-nav');
-        const alcoholSubNav = document.getElementById('alcohol-sub-nav');
-        const teaDisplay = document.getElementById('tea-display');
-        const alcoholDisplay = document.getElementById('alcohol-display');
-
-        function init() {
-            setupEventListeners();
-            populateSubNavs();
-            updateView();
+<script>
+const DB = {
+    koyo: [
+        { title: "Shinjuku Gyoen", location: "Tokyo", period: "Late Nov - Early Dec", details: "A tranquil oasis combining Japanese, French, and English gardens. Offers a unique dual bloom of autumn leaves and roses from mid-Oct to mid-Nov.", price: "¥450" },
+        { title: "Rikugien Garden", location: "Tokyo", period: "Mid-Nov - Early Dec", details: "An exquisite Edo-period garden famous for picturesque reflections and magical evening light-up events during the peak foliage season.", price: "¥300" },
+        { title: "Meiji Jingu Gaien", location: "Tokyo", period: "Mid-Nov - Early Dec", details: "An iconic avenue of ginkgo trees creating a stunning golden tunnel. The Ginkgo Tree Festival offers a lively atmosphere with street food.", price: "Free" },
+        { title: "Kiyomizu-dera", location: "Kyoto", period: "Late Nov - Mid-Dec", details: "Offers iconic views from its wooden stage over a sea of autumn maples. Evening illuminations create a breathtaking, magical atmosphere.", price: "Varies" },
+        { title: "Arashiyama", location: "Kyoto", period: "Late Nov", details: "A scenic district offering multiple experiences: ride the Sagano Romantic Train, take a Hozugawa River boat cruise, or walk through the famous Bamboo Grove.", price: "Varies" },
+        { title: "Rurikō-in Temple", location: "Kyoto", period: "Limited Autumn Dates", details: "A hidden gem open only in spring and autumn. Famed for the stunning reflection of maple leaves on its polished indoor surfaces.", price: "Varies" },
+        { title: "Nikko", location: "Tochigi", period: "Late Oct", details: "A UNESCO World Heritage site combining spiritual landmarks with dramatic natural scenery, including waterfalls framed by vibrant autumn leaves.", price: "Varies" },
+        { title: "Fuji Five Lakes", location: "Yamanashi", period: "Late Oct - Mid-Nov", details: "Iconic views of Mt. Fuji framed by autumn colors. The 'Maple Corridor' at Lake Kawaguchiko is a must-see, especially when illuminated at night.", price: "Varies" },
+        { title: "Daisetsuzan NP", location: "Hokkaido", period: "Late Sep - Early Oct", details: "One of the first places in Japan to see autumn colors. Offers rugged volcanic landscapes, vast hiking trails, and accessible ropeways for stunning views.", price: "Varies" },
+    ],
+    culture: [
+        { title: "Takayama Autumn Fest", location: "Gifu", date: "Oct 9-10", details: "One of Japan's most beautiful festivals, featuring magnificent centuries-old floats (yatai) and mechanical doll performances. Book tours/seats far in advance.", price: "Free entry, tours from $3498 USD" },
+        { title: "Jidai Matsuri", location: "Kyoto", date: "Oct 22", details: "A grand historical parade celebrating Kyoto's founding, with 2,000 participants in authentic costumes from different eras. Paid seating is available.", price: "¥4,000 - ¥6,000 for seats" },
+        { title: "Kurama Fire Festival", location: "Kyoto", date: "Oct 22", details: "A dramatic and spiritual fire festival where participants carry massive flaming torches through the village of Kurama after sunset.", price: "Free entry, tours ~¥27,711" },
+        { title: "Kabuki Theatre", location: "Tokyo/Kyoto", date: "Daily", details: "Experience Japan's highly stylized traditional dance-drama. The Kabuki-za in Tokyo and Minamiza in Kyoto are premier venues. Book online.", price: "Varies by seat" },
+        { title: "Noh Performance", location: "Kyoto", date: "Oct 21 & Nov 11", details: "Witness a 14th-century musical drama. Kyoto Kanze Noh Theatre offers performances with English introductions and rare backstage tours.", price: "¥10,000 - ¥25,000" },
+        { title: "Sumo Tournament", location: "Fukuoka", date: "Nov 9-23", details: "Catch the final Grand Sumo Tournament of the year. An electrifying experience steeped in ritual. Tickets sell out fast; book from Sep 20.", price: "¥4,500+" },
+    ],
+    art: [
+        { title: "Art Week Tokyo", location: "Tokyo", date: "Nov 5-9", details: "A city-wide event connecting over 50 museums and galleries. A central hub for experiencing Tokyo's contemporary art scene with curated shows, talks, and events.", price: "Varies" },
+        { title: "MOT: Aki Sasamoto", location: "Tokyo", date: "Aug 23 - Nov 24", details: "The first mid-career retrospective of the NY-based Japanese artist at the Museum of Contemporary Art Tokyo, featuring installations and live performances.", price: "¥1,500" },
+        { title: "teamLab Borderless", location: "Tokyo", date: "Ongoing", details: "A world of 'art without limits.' This groundbreaking digital art museum in Azabudai Hills offers a highly immersive and interactive experience with no set path.", price: "~$25 USD" },
+        { title: "teamLab Planets", location: "Tokyo", date: "Ongoing", details: "A body-immersive museum in Toyosu where you walk through water and become one with the flowers. A highly sought-after, multi-sensory experience.", price: "Varies" },
+    ],
+    culinary: [
+        { title: "Toyosu Tuna Auction", location: "Tokyo", details: "Witness the energetic, world-famous tuna auction for a behind-the-scenes look at Japan's seafood industry. Follow up with the freshest sushi breakfast imaginable." },
+        { title: "Izakaya Hopping", location: "Shinjuku, Tokyo", details: "Dive into local culture in the atmospheric alleys of Golden Gai or Omoide Yokocho. Hop between tiny pubs (izakaya) for drinks and small plates like yakitori." },
+        { title: "Tokyo Ramen Festa", location: "Tokyo", date: "Late Oct - Early Nov", details: "Tokyo's largest ramen festival, where you can sample dozens of regional varieties from across Japan in one place. A must for noodle lovers." },
+        { title: "Sake Brewery Tour", location: "Tokyo Area", details: "Visit a historic brewery like Sawanoi Ozawa to learn about the art of sake brewing. Tours often include tastings and food pairings." },
+    ],
+    itineraries: [
+        {
+            title: "7-Day Central Japan Highlights",
+            details: "A fast-paced tour for those who want to see it all, covering Karuizawa, Kusatsu Onsen, the Kurobe Alpine Route, the Takayama Festival, and finishing with views of Mt. Fuji.",
+            stops: ["Karuizawa", "Kusatsu", "Kurobe", "Takayama", "Kamikochi", "Kawaguchiko"]
+        },
+        {
+            title: "10-Day Golden Route & Fuji",
+            details: "A classic itinerary balancing Japan's vibrant cities with its most iconic natural landmark. Perfect for first-time visitors.",
+            stops: ["Tokyo", "Fujikawaguchiko", "Kyoto", "Nara", "Osaka"]
+        },
+        {
+            title: "14-Day Foliage & Culture",
+            details: "A more relaxed pace allowing for deeper immersion. This route includes the cultural hub of Kanazawa and the hot springs paradise of Hakone, focusing on prime foliage spots.",
+            stops: ["Tokyo", "Nikko", "Kanazawa", "Kyoto", "Kawaguchiko", "Hakone"]
         }
+    ]
+};
 
-        function setupEventListeners() {
-            navTea.addEventListener('click', () => setCategory('tea'));
-            navAlcohol.addEventListener('click', () => setCategory('alcohol'));
-        }
+document.addEventListener('DOMContentLoaded', () => {
+    const navButtons = document.querySelectorAll('.nav-btn');
+    const contentSections = document.querySelectorAll('.content-section');
+    const appContent = document.getElementById('app-content');
 
-        function setCategory(category) {
-            currentState.category = category;
-            if (category === 'tea') {
-                currentState.selectedItemId = beverageData.teas[0].id;
-            } else {
-                currentState.selectedItemId = beverageData.alcohols[0].id;
-            }
-            updateView();
-        }
+    function switchTab(targetId) {
+        contentSections.forEach(section => {
+            section.classList.remove('active');
+        });
+        navButtons.forEach(button => {
+            button.classList.remove('active');
+        });
 
-        function populateSubNavs() {
-            beverageData.teas.forEach(item => {
-                const btn = document.createElement('button');
-                btn.textContent = item.name;
-                btn.id = `sub-nav-tea-${item.id}`;
-                btn.className = 'sub-nav-btn py-2 px-4 bg-stone-200 rounded-md transition-colors duration-300 hover:bg-stone-300';
-                btn.addEventListener('click', () => {
-                    currentState.selectedItemId = item.id;
-                    updateView();
-                });
-                teaSubNav.appendChild(btn);
-            });
-
-            beverageData.alcohols.forEach(item => {
-                const btn = document.createElement('button');
-                btn.textContent = item.name;
-                btn.id = `sub-nav-alcohol-${item.id}`;
-                btn.className = 'sub-nav-btn py-2 px-4 bg-stone-200 rounded-md transition-colors duration-300 hover:bg-stone-300';
-                btn.addEventListener('click', () => {
-                    currentState.selectedItemId = item.id;
-                    updateView();
-                });
-                alcoholSubNav.appendChild(btn);
-            });
-        }
-
-        function updateView() {
-            if (currentState.category === 'tea') {
-                teaSection.classList.remove('hidden');
-                alcoholSection.classList.add('hidden');
-                navTea.classList.add('nav-btn-active');
-                navAlcohol.classList.remove('nav-btn-active');
-                renderTeaContent();
-            } else {
-                teaSection.classList.add('hidden');
-                alcoholSection.classList.remove('hidden');
-                navTea.classList.remove('nav-btn-active');
-                navAlcohol.classList.add('nav-btn-active');
-                renderAlcoholContent();
-            }
-            updateSubNavActiveState();
-        }
-
-        function updateSubNavActiveState() {
-            document.querySelectorAll('.sub-nav-btn').forEach(btn => btn.classList.remove('sub-nav-btn-active'));
-            const activeBtn = document.getElementById(`sub-nav-${currentState.category}-${currentState.selectedItemId}`);
-            if (activeBtn) {
-                activeBtn.classList.add('sub-nav-btn-active');
-            }
-        }
-
-        function renderTeaContent() {
-            const tea = beverageData.teas.find(t => t.id === currentState.selectedItemId);
-            if (!tea) return;
-
-            teaDisplay.innerHTML = `
-                <div class="grid md:grid-cols-2 gap-8 items-center">
-                    <div>
-                        <h3 class="text-3xl font-bold text-stone-900">${tea.name} <span class="text-2xl text-stone-600">${tea.jp_name}</span></h3>
-                        <p class="text-stone-600 mt-2 mb-4">${tea.desc}</p>
-                        <div class="flex flex-wrap gap-4 text-sm mb-6">
-                            <span class="bg-yellow-100 text-yellow-800 py-1 px-3 rounded-full">Flavor: ${tea.flavor}</span>
-                            <span class="bg-red-100 text-red-800 py-1 px-3 rounded-full">Caffeine: ${tea.caffeine}</span>
-                            <span class="bg-blue-100 text-blue-800 py-1 px-3 rounded-full">Temp: ${tea.temp}</span>
-                        </div>
-                        <div class="accordion">
-                            <details class="border-t border-stone-200 py-2">
-                                <summary class="font-semibold cursor-pointer text-stone-700 hover:text-yellow-800">More Details</summary>
-                                <p class="mt-2 text-stone-600">${tea.details}</p>
-                            </details>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 class="text-xl font-semibold text-center mb-2">Approximate Price Comparison (100g)</h4>
-                        <div class="chart-container">
-                            <canvas id="priceChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            `;
-            createPriceChart(tea, beverageData.teas);
-        }
-
-        function renderAlcoholContent() {
-            const alcohol = beverageData.alcohols.find(a => a.id === currentState.selectedItemId);
-            if (!alcohol) return;
-
-            if (alcohol.id === 'sake') {
-                renderSakeContent(alcohol);
-            } else {
-                renderGeneralAlcoholContent(alcohol);
-            }
-        }
-
-        function renderGeneralAlcoholContent(alcohol) {
-             alcoholDisplay.innerHTML = `
-                <div class="grid md:grid-cols-2 gap-8 items-center">
-                    <div>
-                        <h3 class="text-3xl font-bold text-stone-900">${alcohol.name} <span class="text-2xl text-stone-600">${alcohol.jp_name}</span></h3>
-                        <p class="text-stone-600 mt-2 mb-4">${alcohol.desc}</p>
-                        <div class="accordion">
-                            <details class="border-t border-stone-200 py-2">
-                                <summary class="font-semibold cursor-pointer text-stone-700 hover:text-yellow-800">More Details</summary>
-                                <p class="mt-2 text-stone-600">${alcohol.details}</p>
-                            </details>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 class="text-xl font-semibold text-center mb-2">Approximate Price Comparison (720-750ml)</h4>
-                         <div class="chart-container">
-                            <canvas id="priceChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            `;
-            createPriceChart(alcohol, beverageData.alcohols);
-        }
+        const targetSection = document.getElementById(`${targetId}-section`);
+        const targetButton = document.querySelector(`button[data-target="${targetId}"]`);
         
-        function renderSakeContent(sake) {
-            const grade = sake.grades.find(g => g.id === currentState.selectedSakeGradeId);
+        if(targetSection && targetButton) {
+            targetSection.classList.add('active');
+            targetButton.classList.add('active');
+        }
+    }
 
-            let gradeButtons = sake.grades.map(g => `
-                <button id="sake-grade-${g.id}" class="sake-grade-btn py-2 px-4 bg-stone-200 rounded-md transition-colors duration-300 hover:bg-stone-300 ${g.id === currentState.selectedSakeGradeId ? 'sub-nav-btn-active' : ''}">
-                    ${g.name}
-                </button>
-            `).join('');
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetId = button.dataset.target;
+            switchTab(targetId);
+        });
+    });
 
-            alcoholDisplay.innerHTML = `
-                <div>
-                    <h3 class="text-3xl font-bold text-stone-900 text-center">${sake.name} <span class="text-2xl text-stone-600">${sake.jp_name}</span></h3>
-                    <p class="text-stone-600 mt-2 mb-6 text-center max-w-2xl mx-auto">${sake.desc}</p>
-                    <div class="flex flex-wrap justify-center gap-2 mb-6">${gradeButtons}</div>
-                    <div class="grid md:grid-cols-2 gap-8 items-center bg-stone-50 p-6 rounded-lg">
-                         <div>
-                            <h4 class="text-2xl font-bold text-stone-800">${grade.name}</h4>
-                            <p class="text-stone-600 mt-2 mb-4">${grade.flavor}</p>
-                            <div class="space-y-2 text-sm">
-                                <p><span class="font-semibold">Rice Polishing:</span> ${grade.polishing}</p>
-                                <p><span class="font-semibold">Price Range (720ml):</span> ¥${grade.price[0].toLocaleString()} - ¥${grade.price[1].toLocaleString()}</p>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 class="text-xl font-semibold text-center mb-2">Flavor Profile Comparison</h4>
-                            <div class="chart-container">
-                                <canvas id="sakeRadarChart"></canvas>
-                            </div>
+    function createCard(item) {
+        return `
+            <div class="card p-6 flex flex-col">
+                <h3 class="text-xl font-bold mb-2">${item.title}</h3>
+                <p class="text-amber-700 font-semibold mb-2">${item.location} | ${item.period || item.date}</p>
+                <p class="text-zinc-600 flex-grow">${item.details}</p>
+                ${item.price ? `<p class="mt-4 font-bold text-lg text-right text-amber-800">${item.price}</p>` : ''}
+            </div>
+        `;
+    }
+    
+    function createItineraryCard(item) {
+        const stopsHtml = item.stops.map(stop => `<span class="bg-zinc-200 text-zinc-800 text-sm font-medium mr-2 mb-2 px-2.5 py-0.5 rounded">${stop}</span>`).join('');
+        return `
+            <div class="card p-0 overflow-hidden">
+                <details class="details-card">
+                    <summary class="p-6 font-bold text-xl text-amber-800">${item.title}</summary>
+                    <div class="accordion-content">
+                        <div class="p-6 pt-0">
+                            <p class="text-zinc-600 mb-4">${item.details}</p>
+                            <div class="flex flex-wrap">${stopsHtml}</div>
                         </div>
                     </div>
-                </div>
-            `;
+                </details>
+            </div>
+        `;
+    }
 
-            sake.grades.forEach(g => {
-                document.getElementById(`sake-grade-${g.id}`).addEventListener('click', () => {
-                    currentState.selectedSakeGradeId = g.id;
-                    renderSakeContent(sake);
-                });
-            });
+    document.getElementById('koyo-cards').innerHTML = DB.koyo.map(createCard).join('');
+    document.getElementById('culture-cards').innerHTML = DB.culture.map(createCard).join('');
+    document.getElementById('art-cards').innerHTML = DB.art.map(createCard).join('');
+    document.getElementById('culinary-cards').innerHTML = DB.culinary.map(createCard).join('');
+    document.getElementById('itinerary-cards').innerHTML = DB.itineraries.map(createItineraryCard).join('');
 
-            createSakeRadarChart(sake.grades);
-        }
 
-        function createPriceChart(selectedItem, allItems) {
-            if (priceChart) {
-                priceChart.destroy();
-            }
-            const ctx = document.getElementById('priceChart').getContext('2d');
-            
-            const otherItems = allItems.filter(i => i.id !== selectedItem.id && i.id !== 'sake');
-            const avgMin = otherItems.reduce((acc, curr) => acc + curr.price[0], 0) / otherItems.length;
-            const avgMax = otherItems.reduce((acc, curr) => acc + curr.price[1], 0) / otherItems.length;
-
-            priceChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: [selectedItem.name, `Avg. of Others`],
-                    datasets: [
-                        {
-                            label: 'Min Price (¥)',
-                            data: [selectedItem.price[0], avgMin],
-                            backgroundColor: 'rgba(161, 98, 7, 0.6)',
-                            borderColor: 'rgba(161, 98, 7, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Max Price (¥)',
-                            data: [selectedItem.price[1], avgMax],
-                            backgroundColor: 'rgba(214, 211, 209, 0.6)',
-                            borderColor: 'rgba(214, 211, 209, 1)',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            beginAtZero: true,
-                            type: 'logarithmic',
-                            ticks: {
-                                callback: function(value, index, values) {
-                                    return '¥' + value.toLocaleString();
-                                }
-                            }
+    // Koyo Timeline Chart
+    const koyoCtx = document.getElementById('koyo-timeline-chart').getContext('2d');
+    const koyoData = [
+        { label: 'Hokkaido (Daisetsuzan)', start: 9.75, end: 10.25 },
+        { label: 'Nikko', start: 10.75, end: 11.0 },
+        { label: 'Fuji Five Lakes', start: 10.75, end: 11.5 },
+        { label: 'Tokyo', start: 11.75, end: 12.25 },
+        { label: 'Kyoto', start: 11.75, end: 12.25 },
+    ];
+    new Chart(koyoCtx, {
+        type: 'bar',
+        data: {
+            labels: koyoData.map(d => d.label),
+            datasets: [{
+                label: 'Peak Foliage Window',
+                data: koyoData.map(d => [d.start, d.end]),
+                backgroundColor: 'rgba(217, 119, 6, 0.6)',
+                borderColor: 'rgba(217, 119, 6, 1)',
+                borderWidth: 1,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    min: 9.5,
+                    max: 12.5,
+                    ticks: {
+                        callback: function(value, index, values) {
+                            const monthMap = { 10: 'Oct', 11: 'Nov', 12: 'Dec' };
+                            return monthMap[Math.floor(value)];
                         }
                     },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    if (context.parsed.x !== null) {
-                                        label += '¥' + context.parsed.x.toLocaleString();
-                                    }
-                                    return label;
-                                }
-                            }
+                    title: {
+                        display: true,
+                        text: 'Month'
+                    }
+                },
+                y: {
+                    ticks: {
+                        font: {
+                            size: 14
                         }
                     }
                 }
-            });
-        }
-
-        function createSakeRadarChart(sakeGrades) {
-            if (sakeRadarChart) {
-                sakeRadarChart.destroy();
-            }
-             const ctx = document.getElementById('sakeRadarChart').getContext('2d');
-
-            const selectedGrade = sakeGrades.find(g => g.id === currentState.selectedSakeGradeId);
-
-            const datasets = sakeGrades.map((grade, index) => {
-                const colors = [
-                    'rgba(161, 98, 7, 0.4)', // yellow-700
-                    'rgba(120, 113, 108, 0.4)', // stone-500
-                    'rgba(234, 179, 8, 0.4)', // yellow-500
-                    'rgba(68, 64, 60, 0.4)' // stone-700
-                ];
-                const borderColors = [
-                    'rgba(161, 98, 7, 1)',
-                    'rgba(120, 113, 108, 1)',
-                    'rgba(234, 179, 8, 1)',
-                    'rgba(68, 64, 60, 1)'
-                ];
-                return {
-                    label: grade.name,
-                    data: Object.values(grade.stats),
-                    backgroundColor: colors[index % colors.length],
-                    borderColor: borderColors[index % borderColors.length],
-                    borderWidth: 2,
-                    pointBackgroundColor: borderColors[index % borderColors.length],
-                    hidden: grade.id !== selectedGrade.id
-                }
-            });
-
-            sakeRadarChart = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: ['Aroma', 'Body', 'Complexity', 'Sweetness'],
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            beginAtZero: true,
-                            max: 10,
-                            ticks: {
-                                stepSize: 2,
-                                display: false
-                            },
-                            pointLabels: {
-                                font: {
-                                    size: 14
-                                }
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                usePointStyle: true,
-                            },
-                            onClick: (e, legendItem, legend) => {
-                                const index = legendItem.datasetIndex;
-                                const ci = legend.chart;
-                                const meta = ci.getDatasetMeta(index);
-                                meta.hidden = !meta.hidden;
-                                ci.update();
-                            }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Peak: Early Oct to Early Dec';
                         }
                     }
                 }
-            });
+            }
         }
+    });
 
-        document.addEventListener('DOMContentLoaded', init);
-    </script>
+    // Set initial tab
+    switchTab('planning');
+});
+</script>
+
 </body>
 </html>
