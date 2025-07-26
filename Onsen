@@ -1,0 +1,2631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Onsen Guide: Tokyo & Fuji</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Zen Garden -->
+    <!-- Application Structure Plan: The application is designed as a single-page interactive dashboard. The structure prioritizes user-driven exploration over a linear report format. It starts with a high-level overview (header and key stats), followed by interactive filters that control the main content display. The core of the app is a dynamic grid of onsen cards, which can be filtered and sorted, providing a comparative view. Clicking a card opens a detailed modal view, allowing users to drill down into specific onsen without leaving the main page. This structure was chosen to empower users to quickly find onsen that match their specific criteria (e.g., region, price, tattoo-friendliness) and then explore the details of their selections, which is a more efficient and engaging user flow than reading through a long, static report. New sections for LLM-powered recommendations and etiquette, and comparison/favorites features, are integrated as distinct interactive modules to enhance utility without cluttering the main browsing experience. A new conceptual map section visually groups onsen by region with numbered markers and a legend for spatial reference. -->
+    <!-- Visualization & Content Choices: 1. Onsen Distribution (Doughnut Chart): Goal: Inform users about the regional distribution of the listed onsen. Viz: Chart.js Doughnut Chart. Interaction: Hovering reveals percentages. Justification: A quick, visual way to understand the geographic focus of the guide. 2. Price Distribution (Bar Chart): Goal: Compare the price ranges across different onsen. Viz: Chart.js Bar Chart. Interaction: Filters update the chart; tooltips show exact prices. Justification: Helps users identify onsen within their budget. 3. Onsen Grid (Cards): Goal: Organize and present all onsen for easy comparison. Presentation: HTML/Tailwind CSS cards. Interaction: Filterable by region, price, features, bath types, amenities; sortable by various criteria. Clicking opens a modal. Checkboxes for comparison. Favorite button. Justification: The most flexible way to browse and compare multiple options, with added personalization. 4. Detail Modal: Goal: Provide in-depth information on a selected onsen. Presentation: Structured HTML content with booking link and Google Maps link. Interaction: N/A. Justification: A focused view that prevents users from losing their place on the main page. 5. Compare Modal: Goal: Allow side-by-side comparison of selected onsen. Presentation: HTML table. Interaction: N/A. Justification: Directly addresses user need for comparative analysis. 6. Recommendation & Etiquette LLM: Goal: Provide personalized advice and answer etiquette questions. Presentation: Text input/output area. Interaction: User input triggers LLM generation. Justification: Leverages AI for dynamic, tailored user support. 7. Conceptual Map: Goal: Provide a visual overview of onsen locations relative to each other by region. Presentation: HTML/CSS positioned markers on a background. Interaction: Click markers to open detail modal. Justification: Enhances spatial understanding without requiring complex map APIs. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F7F4;
+            color: #3D3D3D;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .modal {
+            transition: opacity 0.25s ease;
+        }
+        .modal-content {
+            transition: transform 0.25s ease;
+        }
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin: 0.25rem;
+        }
+        .tag-fuji { background-color: #DDEBF8; color: #3B82F6; }
+        .tag-tattoo { background-color: #D1FAE5; color: #10B981; }
+        .tag-luxury { background-color: #FEF3C7; color: #F59E0B; }
+        .tag-budget { background-color: #E0E7FF; color: #6366F1; }
+        .tag-daytrip { background-color: #FCE7F3; color: #EC4899; }
+        .tag-private { background-color: #E6FFFA; color: #319795; }
+        .tag-sauna { background-color: #FFF0F5; color: #D53F8C; }
+        .tag-restaurant { background-color: #F0FFF4; color: #38A169; }
+        .tag-24hr { background-color: #EBF8FF; color: #4299E1; }
+        .star-icon {
+            cursor: pointer;
+            color: #CBD5E0; /* Gray for unfavorited */
+        }
+        .star-icon.favorited {
+            color: #FBBF24; /* Yellow for favorited */
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="app" class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Traveler's Onsen Guide</h1>
+            <p class="text-lg text-gray-600">Curated Onsen in Tokyo & Mount Fuji Region</p>
+        </header>
+
+        <section id="introduction" class="mb-12 bg-white p-6 rounded-xl shadow-sm">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Welcome to the World of Onsen</h2>
+            <p class="text-gray-700 leading-relaxed">This interactive guide allows you to explore top-rated onsen in and around Tokyo and the Mount Fuji region. Use the filters below to narrow down your choices by region, price range, and features (such as Fuji views or tattoo-friendliness) to find the perfect onsen for your trip. Click on any onsen card to view detailed information, including traveler reviews and specific amenities. Embark on a journey to discover the true essence of Japanese onsen culture, from urban sanctuaries to luxurious ryokan with breathtaking views.</p>
+        </section>
+
+        <section id="filters" class="mb-8 p-6 bg-white rounded-xl shadow-sm sticky top-0 z-10">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                <div>
+                    <label for="region-filter" class="block text-sm font-medium text-gray-700 mb-1">Region (地域)</label>
+                    <select id="region-filter" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all">All (所有)</option>
+                        <option value="Tokyo">Tokyo (東京)</option>
+                        <option value="Hakone">Hakone (箱根)</option>
+                        <option value="Mount Fuji Region">Mount Fuji Region (富士山周邊)</option>
+                        <option value="Izu Peninsula">Izu Peninsula (伊豆半島)</option>
+                        <option value="Other Kanto">Other Kanto (其他關東)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="price-filter" class="block text-sm font-medium text-gray-700 mb-1">Price Range (價格範圍)</label>
+                    <select id="price-filter" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all">All (所有)</option>
+                        <option value="budget">Budget (~£80 / ~¥15,000)</option>
+                        <option value="mid-range">Mid-Range (£80-£200 / ¥15,000-¥40,000)</option>
+                        <option value="luxury">Luxury (>£200 / >¥40,000)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="fuji-view-filter" class="block text-sm font-medium text-gray-700 mb-1">Fuji View (富士山景觀)</label>
+                    <select id="fuji-view-filter" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all">All (所有)</option>
+                        <option value="yes">Yes (有)</option>
+                        <option value="no">No (無)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="tattoo-filter" class="block text-sm font-medium text-gray-700 mb-1">Tattoo Friendly (紋身友好)</label>
+                    <select id="tattoo-filter" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all">All (所有)</option>
+                        <option value="yes">Yes (是)</option>
+                        <option value="no">No (否)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="bath-type-filter" class="block text-sm font-medium text-gray-700 mb-1">Bath Type (浴池類型)</label>
+                    <select id="bath-type-filter" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all">All (所有)</option>
+                        <option value="private">Private (私人)</option>
+                        <option value="open-air">Open-Air (露天)</option>
+                        <option value="carbonated">Carbonated (碳酸)</option>
+                        <option value="sulfur">Sulfur (硫磺)</option>
+                        <option value="alkaline">Alkaline (鹼性)</option>
+                        <option value="black_water">Black Water (黑湯)</option>
+                        <option value="chloride">Chloride (氯化物)</option>
+                    </select>
+                </div>
+                 <div>
+                    <label for="amenity-filter" class="block text-sm font-medium text-gray-700 mb-1">Amenities (設施)</label>
+                    <select id="amenity-filter" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all">All (所有)</option>
+                        <option value="sauna">Sauna (桑拿)</option>
+                        <option value="spa_services">Spa Services (水療服務)</option>
+                        <option value="restaurant">Restaurant (餐廳)</option>
+                        <option value="24_hour">24-Hour (24小時)</option>
+                        <option value="kids_area">Kids' Area (兒童區)</option>
+                        <option value="wheelchair_accessible">Wheelchair Accessible (輪椅通道)</option>
+                        <option value="gift_shop">Gift Shop (禮品店)</option>
+                        <option value="pool">Pool (游泳池)</option>
+                        <option value="bar">Bar (酒吧)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="sort-by" class="block text-sm font-medium text-gray-700 mb-1">Sort By (排序方式)</label>
+                    <select id="sort-by" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="default">Default (默認)</option>
+                        <option value="price_asc">Price (Low to High)</option>
+                        <option value="price_desc">Price (High to Low)</option>
+                        <option value="google_rating_desc">Google Rating (Highest)</option>
+                        <option value="booking_rating_desc">Booking.com Rating (Highest)</option>
+                        <option value="time_from_tokyo_asc">Time from Tokyo (Closest)</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button id="reset-filters" class="w-full bg-gray-600 text-white p-2 rounded-lg hover:bg-gray-700 transition-colors">Reset Filters (重置篩選)</button>
+                </div>
+                <div class="flex items-end">
+                    <button id="compare-selected-btn" class="w-full bg-purple-600 text-white p-2 rounded-lg hover:bg-purple-700 transition-colors">Compare Selected (比較選定) <span id="compare-count" class="ml-1 text-xs bg-white text-purple-600 rounded-full px-2 py-1">0</span></button>
+                </div>
+                <div class="flex items-end">
+                    <button id="view-favorites-btn" class="w-full bg-pink-600 text-white p-2 rounded-lg hover:bg-pink-700 transition-colors">View Favorites (查看收藏) <span id="favorite-count" class="ml-1 text-xs bg-white text-pink-600 rounded-full px-2 py-1">0</span></button>
+                </div>
+            </div>
+        </section>
+        
+        <section id="charts" class="mb-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Onsen Distribution by Region (按地區劃分的溫泉分佈)</h3>
+                 <p class="text-center text-gray-600 mb-4 text-sm">This chart shows the regional concentration of onsen featured in this guide. Hakone and the Mount Fuji Region offer the most choices.</p>
+                <div class="chart-container">
+                    <canvas id="regionChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Number of Onsen by Price Range (按價格範圍劃分的溫泉數量)</h3>
+                <p class="text-center text-gray-600 mb-4 text-sm">This chart illustrates how many onsen fall into each price category, helping you easily find options within your budget.</p>
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="onsen-map-section" class="mb-12 bg-white p-6 rounded-xl shadow-sm">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Onsen Locations Map (溫泉位置地圖)</h2>
+            <p class="text-gray-700 mb-4 text-center">This conceptual map illustrates the relative locations of the onsen in each region. Numbers correspond to the Onsen ID.</p>
+            <div id="onsen-map" class="relative w-full h-[600px] bg-gray-100 border border-gray-300 rounded-lg overflow-hidden">
+                <!-- Region overlays for visual grouping -->
+                <div class="absolute top-0 left-0 w-1/2 h-1/2 bg-blue-50 opacity-50 flex items-center justify-center text-xl font-bold text-blue-800">Tokyo (東京)</div>
+                <div class="absolute top-0 right-0 w-1/2 h-1/2 bg-green-50 opacity-50 flex items-center justify-center text-xl font-bold text-green-800">Other Kanto (其他關東)</div>
+                <div class="absolute bottom-0 left-0 w-1/2 h-1/2 bg-red-50 opacity-50 flex items-center justify-center text-xl font-bold text-red-800">Hakone (箱根)</div>
+                <div class="absolute bottom-0 right-0 w-1/2 h-1/2 bg-yellow-50 opacity-50 flex items-center justify-center text-xl font-bold text-yellow-800">Mt. Fuji & Izu (富士山與伊豆)</div>
+                <!-- Onsen markers will be dynamically added here by JavaScript -->
+            </div>
+            <div id="onsen-map-legend" class="mt-8">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Onsen Legend (溫泉圖例)</h3>
+                <ul class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 text-sm" id="legend-list">
+                    <!-- Legend items will be dynamically added here by JavaScript -->
+                </ul>
+            </div>
+        </section>
+
+        <section id="gemini-feature" class="mb-12 bg-white p-6 rounded-xl shadow-sm text-center">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Get Personalized Onsen Recommendations ✨</h2>
+            <p class="text-gray-700 mb-4">Describe your ideal onsen experience (e.g., "I want a quiet, luxurious onsen with a great view for a romantic getaway," or "Suggest a budget-friendly day trip with tattoo access near Tokyo for a solo traveler.")</p>
+            <textarea id="recommendation-input" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-4" rows="4" placeholder="Tell me what you're looking for..."></textarea>
+            <button id="get-recommendation-btn" class="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold">Generate Recommendation (生成推薦) ✨</button>
+            <div id="recommendation-output" class="mt-6 p-4 bg-gray-50 rounded-lg text-left hidden">
+                <p class="text-gray-800 font-medium mb-2">Your Personalized Recommendation:</p>
+                <div id="recommendation-text" class="text-gray-700 leading-relaxed"></div>
+                <div id="recommendation-loading" class="text-blue-600 mt-2 hidden">Generating recommendation...</div>
+            </div>
+        </section>
+
+        <section id="gemini-etiquette-feature" class="mb-12 bg-white p-6 rounded-xl shadow-sm text-center">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Onsen Etiquette Helper 🧖‍♀️</h2>
+            <p class="text-700 mb-4">Have questions about onsen rules or customs? Ask here!</p>
+            <textarea id="etiquette-input" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-4" rows="2" placeholder="e.g., 'What should I do with my towel?' or 'Are tattoos allowed?'"></textarea>
+            <button id="get-etiquette-btn" class="bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition-colors font-semibold">Ask About Etiquette (詢問禮儀) ❓</button>
+            <div id="etiquette-output" class="mt-6 p-4 bg-gray-50 rounded-lg text-left hidden">
+                <p class="text-gray-800 font-medium mb-2">Etiquette Advice:</p>
+                <div id="etiquette-text" class="text-gray-700 leading-relaxed"></div>
+                <div id="etiquette-loading" class="text-green-600 mt-2 hidden">Getting advice...</div>
+            </div>
+        </section>
+
+        <main id="onsen-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        </main>
+
+    </div>
+
+    <div id="onsen-modal" class="modal fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 hidden opacity-0">
+        <div class="modal-content bg-white w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl overflow-y-auto transform scale-95">
+            <div class="sticky top-0 bg-white p-4 border-b border-gray-200 flex justify-between items-center z-10">
+                <h2 id="modal-title" class="text-2xl font-bold text-gray-800"></h2>
+                <button id="close-modal" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <div id="modal-body" class="p-6">
+            </div>
+        </div>
+    </div>
+
+    <div id="compare-modal" class="modal fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 hidden opacity-0">
+        <div class="modal-content bg-white w-full max-w-5xl max-h-[90vh] rounded-2xl shadow-2xl overflow-y-auto transform scale-95">
+            <div class="sticky top-0 bg-white p-4 border-b border-gray-200 flex justify-between items-center z-10">
+                <h2 class="text-2xl font-bold text-gray-800">Compare Onsen (比較溫泉)</h2>
+                <button id="close-compare-modal" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <div id="compare-body" class="p-6">
+                <p id="compare-empty-message" class="text-center text-gray-600 hidden">Please select at least two onsen to compare.</p>
+                <table id="compare-table" class="min-w-full divide-y divide-gray-200 hidden">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Feature</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="favorites-modal" class="modal fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4 hidden opacity-0">
+        <div class="modal-content bg-white w-full max-w-3xl max-h-[90vh] rounded-2xl shadow-2xl overflow-y-auto transform scale-95">
+            <div class="sticky top-0 bg-white p-4 border-b border-gray-200 flex justify-between items-center z-10">
+                <h2 class="text-2xl font-bold text-gray-800">My Favorites (我的收藏)</h2>
+                <button id="close-favorites-modal" class="text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            </div>
+            <div id="favorites-body" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <p id="favorites-empty-message" class="text-center text-gray-600 hidden col-span-full">You haven't favorited any onsen yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const onsenData = [
+            {
+                id: 1,
+                name: "Maenohara Onsen Saya no Yudokoro",
+                name_zh: "前野原溫泉 さやの湯處",
+                region: "Tokyo",
+                region_zh: "東京",
+                price: "budget",
+                price_day_use_gbp: 5, // ¥930-¥1,300
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Restaurant on site)",
+                room_types_and_packages: "N/A (Day Spa), Private baths available for ¥2,100/hour.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: 4.4,
+                booking_rating: "N/A",
+                nearest_station: "Shimura-sakaue Station (10 min walk)",
+                time_from_tokyo: "~30 mins",
+                detailed_transport: "From Tokyo Station, take the Marunouchi Line to Korakuen, then transfer to the Mita Line to Shimura-sakaue Station. Approximately 10-minute walk from the station.",
+                google_maps_link: "https://maps.app.goo.gl/3Xg4Z8XQ1Y2Z7Xg4A", // Example link
+                usp: "Natural hot spring in a renovated traditional residence with a beautiful garden.",
+                sentiment: "Praised for its authentic atmosphere and high-quality, heat-retaining water at an affordable price. A true urban oasis.",
+                booking_url: "https://www.sayanoyudokoro.co.jp/eng/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["sauna", "restaurant"],
+                map_coords: { x: 20, y: 20 }
+            },
+            {
+                id: 2,
+                name: "Thermae-Yu",
+                name_zh: "テルマー湯",
+                region: "Tokyo",
+                region_zh: "東京",
+                price: "budget",
+                price_day_use_gbp: 18, // ¥2,900-¥3,000
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Restaurants on site)",
+                room_types_and_packages: "N/A (Day Spa)",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: 4.1,
+                booking_rating: "N/A",
+                nearest_station: "Shinjuku-sanchome Station (2 min walk)",
+                time_from_tokyo: "~15 mins",
+                detailed_transport: "Located in Shinjuku Kabukicho, a 2-minute walk from Shinjuku-sanchome Station (Marunouchi, Fukutoshin, Shinjuku Lines).",
+                google_maps_link: "https://maps.app.goo.gl/4Yg4Z8XQ1Y2Z7Xg4B", // Example link
+                usp: "A luxurious 24/7 'super sento' in the heart of Shinjuku, featuring water trucked in from Nakaizu.",
+                sentiment: "Highly convenient for travelers in Shinjuku. Valued for its extensive facilities, cleanliness, and 24-hour operation, making it perfect for relaxing after a long day.",
+                booking_url: "https://thermae-yu.jp/en/",
+                bath_types: ["open-air", "indoor", "carbonated", "alkaline"],
+                amenities: ["sauna", "spa_services", "restaurant", "24_hour"],
+                map_coords: { x: 30, y: 40 }
+            },
+            {
+                id: 3,
+                name: "Musashi Koyama Onsen Shimizuyu",
+                name_zh: "武藏小山溫泉 清水湯",
+                region: "Tokyo",
+                region_zh: "東京",
+                price: "budget",
+                price_day_use_gbp: 3, // ¥470
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A",
+                room_types_and_packages: "N/A (Day Spa), Sauna additional ¥400, Bedrock Bathing (Women Only) ¥1,400.",
+                fuji_view: false,
+                tattoo_friendly: true,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: 4.3,
+                booking_rating: "N/A",
+                nearest_station: "Musashi-Koyama Station (6 min walk)",
+                time_from_tokyo: "~20 mins",
+                detailed_transport: "From Shinjuku, take the JR Yamanote Line to Meguro, then transfer to the Tokyu Meguro Line to Musashi-Koyama Station. Approximately 6-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/5Yg4Z8XQ1Y2Z7Xg4C", // Example link
+                usp: "Historic public bath offering two distinct types of natural hot springs: a 'black' beauty spring and a 'golden' medicinal spring.",
+                sentiment: "A local gem beloved for its unique dual-spring experience at an incredibly low price. Being tattoo-friendly is a major plus for international visitors.",
+                booking_url: "https://shimizuyu.com/",
+                bath_types: ["indoor", "black_water", "alkaline"],
+                amenities: ["sauna"],
+                map_coords: { x: 15, y: 60 }
+            },
+            {
+                id: 4,
+                name: "Tokyo Dome Natural Onsen Spa LaQua",
+                name_zh: "東京巨蛋天然溫泉 Spa LaQua",
+                region: "Tokyo",
+                region_zh: "東京",
+                price: "mid-range",
+                price_day_use_gbp: 18, // From ¥3,500
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Organic restaurants & cafes on site)",
+                room_types_and_packages: "N/A (Day Spa)",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "Korakuen and Suidobashi stations",
+                time_from_tokyo: "N/A",
+                detailed_transport: "Directly connected to Korakuen Station (Tokyo Metro Marunouchi Line, Namboku Line) and Suidobashi Station (JR Chuo Line, Toei Mita Line).",
+                google_maps_link: "https://maps.app.goo.gl/6Xg4Z8XQ1Y2Z7Xg4D", // Example link
+                usp: "Natural hot spring within Tokyo Dome City, drawing mineral-rich water from 1,700 meters underground. Comprehensive beauty and wellness experience.",
+                sentiment: "Popular among Tokyo locals, with fewer tourists, offering a more private environment. Chinese reviews commend its comprehensive facilities. Xiaohongshu review praises its exceptional cleanliness.",
+                booking_url: "https://www.laqua.jp/en/spa/",
+                bath_types: ["indoor"],
+                amenities: ["sauna", "spa_services", "restaurant"],
+                map_coords: { x: 40, y: 30 }
+            },
+            {
+                id: 5,
+                name: "Toyosu Manyo Club",
+                name_zh: "豐洲萬葉俱樂部",
+                region: "Tokyo",
+                region_zh: "東京",
+                price: "mid-range",
+                price_day_use_gbp: 25,
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Buffet restaurant on site, food prices can be higher)",
+                room_types_and_packages: "N/A (Day Spa)",
+                fuji_view: false,
+                tattoo_friendly: true, // Not strictly enforced
+                hotel_star: "N/A (Day Spa)",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "Yurikamome Line Shijomae Station (few mins)",
+                time_from_tokyo: "N/A",
+                detailed_transport: "A few minutes walk from Yurikamome Line Shijomae Station. Free shuttle service available from Shinbashi.",
+                google_maps_link: "https://maps.app.goo.gl/7Xg4Z8XQ1Y2Z7Xg4E", // Example link
+                usp: "Transports Hakone/Yugawara Onsen water daily. 24-hour operation. Rooftop footbath with 360-degree Tokyo skyline views, including Tokyo Tower.",
+                sentiment: "Chinese/Korean reviews praise the beautiful scenery, especially the night view from the footbath. Positive sentiment about cleanliness and quality of water.",
+                booking_url: "https://www.manyo.co.jp/toyosu/en/",
+                bath_types: ["open-air", "indoor", "alkaline"],
+                amenities: ["sauna", "spa_services", "restaurant", "24_hour"],
+                map_coords: { x: 45, y: 50 }
+            },
+            {
+                id: 6,
+                name: "Hasunuma Onsen",
+                name_zh: "蓮沼溫泉",
+                region: "Tokyo",
+                region_zh: "東京",
+                price: "budget",
+                price_day_use_gbp: 3, // ¥550
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A",
+                room_types_and_packages: "N/A (Day Spa)",
+                fuji_view: false,
+                tattoo_friendly: true,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "Tokyu Ikegami Line Hasunuma Station (2 min walk)",
+                time_from_tokyo: "~20-30 mins",
+                detailed_transport: "Approximately 10 minutes walk from JR Keihin-Tohoku Line Kamata Station or 2 minutes walk from Tokyu Ikegami Line Hasunuma Station. Three free parking spaces available.",
+                google_maps_link: "https://maps.app.goo.gl/8Xg4Z8XQ1Y2Z7Xg4F", // Example link
+                usp: "Resembles a traditional Japanese inn (ryokan). Features a unique circular digital signage and a Mount Fuji mural. Offers three distinct tubs: heated natural hot spring, carbonated hot spring, and a cold bath using free-flowing source water.",
+                sentiment: "Japanese bloggers praise its 'fantastic light' and 'very good atmosphere' in the evening. Described as a 'beautiful space' transcending typical public bath expectations. The cold bath using source water is highly refreshing.",
+                booking_url: "https://hasunuma-onsen.com/",
+                bath_types: ["indoor", "carbonated", "alkaline"],
+                amenities: ["sauna"],
+                map_coords: { x: 25, y: 70 }
+            },
+            {
+                id: 7,
+                name: "Kamata Onsen",
+                name_zh: "蒲田溫泉",
+                region: "Tokyo",
+                region_zh: "東京",
+                price: "budget",
+                price_day_use_gbp: 3, // ¥550
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (On-site dining hall)",
+                room_types_and_packages: "N/A (Day Spa)",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "JR Keihin-Tohoku Line Kamata Station (10 min walk)",
+                time_from_tokyo: "~20-30 mins",
+                detailed_transport: "Approximately 10 minutes walk from JR Keihin-Tohoku Line Kamata Station. Operates daily from 10:00 AM to 12:00 AM.",
+                google_maps_link: "https://maps.app.goo.gl/9Xg4Z8XQ1Y2Z7Xg4G", // Example link
+                usp: "Long-established public bathhouse (founded 1937) known for its distinctive, intensely black hot spring water. Undiluted black hot spring water, heated with firewood.",
+                sentiment: "Japanese bloggers express great joy at experiencing the black hot spring, noting its unique scent and smooth feel. Highly recommended for its quality at a public bath price.",
+                booking_url: "https://kamataonsen.com/",
+                bath_types: ["indoor", "black_water"],
+                amenities: ["restaurant"],
+                map_coords: { x: 35, y: 75 }
+            },
+            {
+                id: 8,
+                name: "Hakone Yumoto Onsen Tsukino Yado Sara",
+                name_zh: "箱根湯本溫泉 月之宿 紗羅",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 331,
+                price_overnight_gbp_high: 546,
+                meal_plan_details: "Yes (Breakfast & Dinner)",
+                room_types_and_packages: "Japanese/Western-style rooms, many with private open-air baths.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: 4.2,
+                booking_rating: "8.5",
+                nearest_station: "Hakone-Yumoto Station (10 min walk)",
+                time_from_tokyo: "~90 mins",
+                detailed_transport: "From Shinjuku, take the Odakyu Romancecar to Hakone-Yumoto Station (approx. 85 mins), then a 10-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/AXg4Z8XQ1Y2Z7Xg4H", // Example link
+                usp: "Modern ryokan blending sleek design with traditional elements. All rooms feature private open-air baths.",
+                sentiment: "Highly rated for its modern, clean rooms and excellent service. The private baths and quality meals offer a luxurious and relaxing experience.",
+                booking_url: "https://www.hotespa.net/resort/tsukino-yado-sara/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["sauna", "spa_services", "restaurant"],
+                map_coords: { x: 20, y: 550 }
+            },
+            {
+                id: 9,
+                name: "Gora Kadan",
+                name_zh: "強羅花壇",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 668,
+                price_overnight_gbp_high: 1107,
+                meal_plan_details: "Yes (Exquisite Kaiseki Dinner & Breakfast)",
+                room_types_and_packages: "Suites with private gardens, rooms with private open-air stone baths.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "5 stars",
+                google_rating: 4.4,
+                booking_rating: "9.1",
+                nearest_station: "Gora Station (5 min walk)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Hakone-Yumoto, take the Hakone Tozan Railway to Gora Station (approx. 40 mins), then a 5-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/BXg4Z8XQ1Y2Z7Xg4I", // Example link
+                usp: "A former Imperial family summer villa, now a top-tier luxury ryokan known for its stunning gardens and impeccable service.",
+                sentiment: "The pinnacle of luxury. Guests rave about the imperial history, beautiful gardens, exceptional kaiseki cuisine, and the ultimate privacy of the in-room onsens.",
+                booking_url: "https://www.gorakadan.com/en/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["sauna", "spa_services", "restaurant", "pool"],
+                map_coords: { x: 30, y: 500 }
+            },
+            {
+                id: 10,
+                name: "Hakone Ginyu",
+                name_zh: "箱根吟遊",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 575,
+                price_overnight_gbp_high: 738,
+                meal_plan_details: "N/A",
+                room_types_and_packages: "All rooms have open-air hot spring bath, private terrace, and dining area.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "Accessible via Odakyu Limited Express",
+                time_from_tokyo: "~1.5-2 hours",
+                detailed_transport: "From Shinjuku, take the Odakyu Romancecar to Hakone-Yumoto, then transfer to Hakone Tozan Railway to Miyanoshita. Shuttle service or taxi from there.",
+                google_maps_link: "https://maps.app.goo.gl/CXg4Z8XQ1Y2Z7Xg4J", // Example link
+                usp: "All rooms feature own open-air hot spring bath, private terrace, and dining area overlooking a picturesque gorge. Known for rapid bookings.",
+                sentiment: "Highly sought-after, implying strong positive sentiment.",
+                booking_url: "https://www.hakoneginyu.co.jp/en/",
+                bath_types: ["private", "open-air"],
+                amenities: ["sauna", "restaurant", "bar"],
+                map_coords: { x: 40, y: 450 }
+            },
+            {
+                id: 11,
+                name: "Hakone Yuryo",
+                name_zh: "箱根湯寮",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "budget",
+                price_day_use_gbp: 12, // ¥1,700-¥2,000
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Irori restaurant on site)",
+                room_types_and_packages: "19 private open-air baths for rent (from ¥9,400 for 120 mins).",
+                fuji_view: false,
+                tattoo_friendly: true,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: 4.3,
+                booking_rating: "N/A",
+                nearest_station: "Hakone-Yumoto Station (3 min free shuttle)",
+                time_from_tokyo: "~90 mins",
+                detailed_transport: "Free shuttle bus operates every 10-15 minutes from Hakone-Yumoto Station (approx. 3 min ride).",
+                google_maps_link: "https://maps.app.goo.gl/DXg4Z8XQ1Y2Z7Xg4K", // Example link
+                usp: "A large, traditional-style day spa with a focus on private onsen rentals, making it ideal for families, couples, and those with tattoos.",
+                sentiment: "A favorite day-trip destination. Appreciated for its rustic charm, numerous private bath options, and tattoo-friendly policy, offering a relaxing escape.",
+                booking_url: "https://www.hakone-yuryo.jp/english/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["restaurant", "gift_shop"],
+                map_coords: { x: 10, y: 470 }
+            },
+            {
+                id: 12,
+                name: "Hakone Kowakien Tenyu",
+                name_zh: "箱根小涌園天悠",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 200,
+                price_overnight_gbp_high: 404,
+                meal_plan_details: "N/A (On-site restaurant)",
+                room_types_and_packages: "All 150 rooms are equipped with open-air baths. Many rooms feature private hot tubs.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "Hakone-Yumoto (then Hakone Tozan Railway to Gora, then shuttle bus)",
+                time_from_tokyo: "~1 hour 30 min",
+                detailed_transport: "From Shinjuku, take Odakyu Limited Express to Hakone-Yumoto (approx. 85 mins), then Hakone Tozan Railway to Gora, then shuttle bus to the hotel.",
+                google_maps_link: "https://maps.app.goo.gl/EXg4Z8XQ1Y2Z7Xg4L", // Example link
+                usp: "All 150 rooms are equipped with open-air baths, offering beautiful mountain views. Comprehensive wellness destination with spa services.",
+                sentiment: "Xiaohongshu reviews highlight 'breathtaking views of the surrounding forest and mountain range from this balcony' and describe the ryokan as a 'relaxation haven'.",
+                booking_url: "https://www.tenyu-hakone.com/en/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["sauna", "spa_services", "restaurant", "kids_area"],
+                map_coords: { x: 50, y: 480 }
+            },
+            {
+                id: 13,
+                name: "Hotel Green Plaza Hakone",
+                name_zh: "箱根綠色廣場酒店",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 175,
+                price_overnight_gbp_high: 273,
+                meal_plan_details: "Yes (Buffet Breakfast & Dinner)",
+                room_types_and_packages: "Western and Japanese-style rooms.",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "3 stars",
+                google_rating: 4.0,
+                booking_rating: "8.0",
+                nearest_station: "Ubako Station (Hakone Ropeway, 3 min walk)",
+                time_from_tokyo: "~2.5 hours",
+                detailed_transport: "From Shinjuku, take Odakyu Romancecar to Hakone-Yumoto, then Hakone Tozan Bus or Ropeway to Ubako Station (approx. 2.5 hours total). 3-minute walk from Ubako Station.",
+                google_maps_link: "https://maps.app.goo.gl/FXg4Z8XQ1Y2Z7Xg4M", // Example link
+                usp: "Famous for its outdoor onsen offering a direct, stunning view of Mount Fuji on clear days.",
+                sentiment: "The Mount Fuji view from the open-air bath is the undisputed highlight and a major draw for travelers. A truly memorable experience.",
+                booking_url: "https://www.hgp.co.jp/hakone/en/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["sauna", "spa_services", "restaurant", "pool"],
+                map_coords: { x: 60, y: 520 }
+            },
+            {
+                id: 14,
+                name: "Fujiya Hotel",
+                name_zh: "富士屋酒店",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 150,
+                price_overnight_gbp_high: 386,
+                meal_plan_details: "N/A (various dining options)",
+                room_types_and_packages: "All guest rooms are equipped with natural hot spring baths.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "N/A (bus access to all parts of Hakone)",
+                time_from_tokyo: "~1.5-2 hours",
+                detailed_transport: "From Shinjuku, take Odakyu Romancecar to Hakone-Yumoto, then a short bus ride to Miyanoshita. The hotel is well-connected by bus to all parts of Hakone.",
+                google_maps_link: "https://maps.app.goo.gl/GXg4Z8XQ1Y2Z7Xg4N", // Example link
+                usp: "Classic resort hotel steeped in history and tradition. Expansive 16,000 square meter garden.",
+                sentiment: "Reviews praise the breakfast buffet and the hotel's convenient bus access to all parts of Hakone. Pool is also noted as being great for children.",
+                booking_url: "https://www.fujiyahotel.jp/en/",
+                bath_types: ["indoor"],
+                amenities: ["restaurant", "kids_area", "pool"],
+                map_coords: { x: 70, y: 550 }
+            },
+            {
+                id: 15,
+                name: "Hakone Ashinoko Hanaori",
+                name_zh: "箱根蘆之湖花織",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 145,
+                price_overnight_gbp_high: 278,
+                meal_plan_details: "N/A (restaurant and bar/lounge)",
+                room_types_and_packages: "Standard rooms available.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "3 stars",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "N/A (near Lake Ashi)",
+                time_from_tokyo: "~1.5-2 hours",
+                detailed_transport: "From Shinjuku, take Odakyu Romancecar to Hakone-Yumoto, then bus to Lake Ashi area. The hotel is located near Lake Ashi.",
+                google_maps_link: "https://maps.app.goo.gl/HXg4Z8XQ1Y2Z7Xg4O", // Example link
+                usp: "Modern hotel with restaurant & bar/lounge.",
+                sentiment: "Often considered to be below the average price for 3-star hotels in Hakone.",
+                booking_url: "https://www.hotespa.net/resort/ashinoko-hanaori/",
+                bath_types: ["indoor"],
+                amenities: ["restaurant", "bar"],
+                map_coords: { x: 80, y: 490 }
+            },
+            {
+                id: 16,
+                name: "Hotel Okada",
+                name_zh: "岡田酒店",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 110,
+                price_overnight_gbp_high: 215,
+                meal_plan_details: "N/A (restaurant, bar/lounge)",
+                room_types_and_packages: "Various room types, coffee machine in rooms.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "N/A (free parking and shuttle service)",
+                time_from_tokyo: "~1.5-2 hours",
+                detailed_transport: "From Hakone-Yumoto Station, a free shuttle service is available to the hotel.",
+                google_maps_link: "https://maps.app.goo.gl/IXg4Z8XQ1Y2Z7Xg4P", // Example link
+                usp: "4-star property with a range of amenities including spa, hot tub, outdoor pool, and sauna.",
+                sentiment: "Staff described as polite, attentive, and friendly.",
+                booking_url: "https://www.hotel-okada.co.jp/en/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["sauna", "spa_services", "restaurant", "pool", "bar"],
+                map_coords: { x: 15, y: 430 }
+            },
+            {
+                id: 17,
+                name: "Gora Hanaougi Madoka no Mori",
+                name_zh: "強羅花扇圓香之森",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 150,
+                price_overnight_gbp_high: 293,
+                meal_plan_details: "N/A",
+                room_types_and_packages: "All rooms include open-air baths. Deluxe Twin Rooms and Standard Twin Rooms available.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "Excellent",
+                nearest_station: "N/A (located in Gora)",
+                time_from_tokyo: "~1.5-2 hours",
+                detailed_transport: "From Hakone-Yumoto, take the Hakone Tozan Railway to Gora. The hotel is located in Gora.",
+                google_maps_link: "https://maps.app.goo.gl/JXg4Z8XQ1Y2Z7Xg4Q", // Example link
+                usp: "All rooms include open-air baths, creating a highly atmospheric experience amidst its natural mountain surroundings.",
+                sentiment: "Rated as 'Excellent' by guests.",
+                booking_url: "https://www.hanaougi.co.jp/madoka/",
+                bath_types: ["private", "open-air"],
+                amenities: [],
+                map_coords: { x: 40, y: 580 }
+            },
+            {
+                id: 18,
+                name: "Mount View Hakone",
+                name_zh: "箱根山景酒店",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "budget",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 73,
+                price_overnight_gbp_high: 171,
+                meal_plan_details: "N/A",
+                room_types_and_packages: "Private open-air baths for additional fee (¥2,000-¥3,000 for 45 mins).",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "3 stars",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "N/A (located in Sengokuhara)",
+                time_from_tokyo: "~1.5-2 hours",
+                detailed_transport: "From Hakone-Yumoto, take the Hakone Tozan Bus to Sengokuhara. The ryokan is located in Sengokuhara.",
+                google_maps_link: "https://maps.app.goo.gl/KXg4Z8XQ1Y2Z7Xg4R", // Example link
+                usp: "Offers private open-air baths for a more secluded experience. Supports English and Chinese speaking staff during certain hours.",
+                sentiment: "Secluded experience, multilingual staff.",
+                booking_url: "https://www.mountviewhakone.co.jp/en/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["spa_services"],
+                map_coords: { x: 50, y: 550 }
+            },
+            {
+                id: 19,
+                name: "Yurari",
+                name_zh: "富士眺望之湯 ゆらり",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "budget",
+                price_day_use_gbp: 9, // ¥1,300-¥1,500
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Restaurant on site)",
+                room_types_and_packages: "N/A (Day Spa), private baths available for rent (¥2,500 for 60 mins).",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: 4.2,
+                booking_rating: "N/A",
+                nearest_station: "Kawaguchiko Station (then 20 min bus)",
+                time_from_tokyo: "~2.5 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Kawaguchiko Station (approx. 2 hours), then a 20-minute bus ride to Yurari.",
+                google_maps_link: "https://maps.app.goo.gl/LXg4Z8XQ1Y2Z7Xg4S", // Example link
+                usp: "A day-use onsen with 16 different baths and a spectacular, direct view of Mount Fuji from its main open-air bath.",
+                sentiment: "Praised for its incredible Fuji views and wide variety of baths. Considered very tourist-friendly with English signage, making it an accessible choice.",
+                booking_url: "https://www.fuji-yurari.jp/english/",
+                bath_types: ["private", "open-air", "indoor", "carbonated"],
+                amenities: ["restaurant"],
+                map_coords: { x: 60, y: 200 }
+            },
+            {
+                id: 20,
+                name: "Hottarakashi Onsen",
+                name_zh: "ほったらかし溫泉",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "budget",
+                price_day_use_gbp: 6, // ¥800-¥900
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Simple eatery on site)",
+                room_types_and_packages: "N/A (Day Spa)",
+                fuji_view: true,
+                tattoo_friendly: true,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: 4.5,
+                booking_rating: "N/A",
+                nearest_station: "Yamanashishi Station (then 10 min taxi)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "Requires a car. Approx. 1-hour drive from Fuji Five Lakes area. From Yamanashishi Station, a 10-minute taxi ride.",
+                google_maps_link: "https://maps.app.goo.gl/MXg4Z8XQ1Y2Z7Xg4T", // Example link
+                usp: "Legendary for its panoramic sunrise views over Mount Fuji from rustic, open-air baths. Famously tattoo-friendly.",
+                sentiment: "An unforgettable, almost spiritual experience. Waking up early for the sunrise soak is considered a must-do. The combination of stunning vistas and a welcoming atmosphere is a huge draw.",
+                booking_url: "http://www.hottarakashi.com/",
+                bath_types: ["open-air"],
+                amenities: ["restaurant"],
+                map_coords: { x: 70, y: 150 }
+            },
+            {
+                id: 21,
+                name: "Mt. Fuji View Onsen Ooike Hotel",
+                name_zh: "富士山景溫泉大池酒店",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 119,
+                price_overnight_gbp_high: 247,
+                meal_plan_details: "Yes (Breakfast buffet and traditional kaiseki multi-course dinners)",
+                room_types_and_packages: "Traditional Japanese-style rooms and modern Western designs, with options for en-suite baths.",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "250 meters from public transportation",
+                time_from_tokyo: "~2-2.5 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Kawaguchiko Station, then a short walk or taxi. Located 250 meters from public transportation.",
+                google_maps_link: "https://maps.app.goo.gl/NXg4Z8XQ1Y2Z7Xg4U", // Example link
+                usp: "Highly regarded for its majestic views of Mount Fuji. Offers a variety of accommodations.",
+                sentiment: "Korean travelers express great fondness for rooms offering views of the majestic Mount Fuji. Praised for its 'beautifully renovated rooms' and its 'first floor onsen... full of Japan culture'. Chinese reviews highlight the beautiful Mount Fuji views from both rooms and baths, as well as the delicious food.",
+                booking_url: "https://www.ooikehotel.co.jp/en/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["sauna", "spa_services", "restaurant", "kids_area"],
+                map_coords: { x: 80, y: 250 }
+            },
+            {
+                id: 22,
+                name: "Fuji Kawaguchiko Onsen Konanso",
+                name_zh: "富士河口湖溫泉湖南莊",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 250,
+                price_overnight_gbp_high: 399,
+                meal_plan_details: "Yes (Kaiseki Dinner & Buffet Breakfast)",
+                room_types_and_packages: "Japanese-style rooms, some with private onsen and lake/Fuji views.",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: 4.5,
+                booking_rating: "9.0",
+                nearest_station: "Kawaguchiko Station (10 min walk or free shuttle)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Kawaguchiko Station (approx. 2 hours), then a 10-minute walk or free shuttle.",
+                google_maps_link: "https://maps.app.goo.gl/OXg4Z8XQ1Y2Z7Xg4V", // Example link
+                usp: "Offers magnificent Mount Fuji views from its public baths and a stunning rooftop footbath.",
+                sentiment: "Guests consistently praise the breathtaking views of both the lake and Mount Fuji. The friendly staff, excellent food, and rooftop footbath create a memorable stay.",
+                booking_url: "https://www.konansou.com/en/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["restaurant"],
+                map_coords: { x: 75, y: 300 }
+            },
+            {
+                id: 23,
+                name: "Fujiyama Onsen",
+                name_zh: "富士山溫泉",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "budget",
+                price_day_use_gbp: 7, // ¥700-¥1,400
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Restaurant on site)",
+                room_types_and_packages: "N/A (Day Spa)",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "Right next to Fuji-Q Park",
+                time_from_tokyo: "~2-2.5 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Fuji-Q Highland (approx. 1 hour 45 mins). The onsen is right next to Fuji-Q Park.",
+                google_maps_link: "https://maps.app.goo.gl/PXg4Z8XQ1Y2Z7Xg4W", // Example link
+                usp: "Japanese-style hot spring situated in the Fuji-Q Highland area, offering views of Mount Fuji. Boasts one of Japan's largest pure wooden bathhouses, renowned for its excellent skin beautifying effects.",
+                sentiment: "Korean travelers commend its convenient location right next to Fuji-Q Park. Reviews highlight the 'Fuji private hot spring hotel!' with 'truly amazing' breakfast views of Mount Fuji, describing the experience as 'healing the whole body'.",
+                booking_url: "https://www.fujiyamaonsen.jp/en/",
+                bath_types: ["indoor"],
+                amenities: ["sauna", "restaurant"],
+                map_coords: { x: 90, y: 200 }
+            },
+            {
+                id: 24,
+                name: "Shuhokaku Kogetsu",
+                name_zh: "秀峰閣湖月",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 380,
+                price_overnight_gbp_high: 843,
+                meal_plan_details: "Yes (Seasonal Kaiseki Dinner & Breakfast)",
+                room_types_and_packages: "All rooms have direct lake and Fuji views. Some have private open-air baths.",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: 4.6,
+                booking_rating: "9.2",
+                nearest_station: "Kawaguchiko Station (then 15 min by shuttle)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Kawaguchiko Station (approx. 2 hours), then a 15-minute shuttle ride.",
+                google_maps_link: "https://maps.app.goo.gl/QXg4Z8XQ1Y2Z7Xg4X", // Example link
+                usp: "Every single room, as well as the onsen, offers a perfect, unobstructed view of Mount Fuji across Lake Kawaguchiko.",
+                sentiment: "Considered one of the best locations for Fuji views. Waking up to the 'reverse Fuji' reflection on the lake is a highlight. The view, service, and food are all described as amazing.",
+                booking_url: "https://www.kogetu.com/en/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["restaurant"],
+                map_coords: { x: 85, y: 350 }
+            },
+            {
+                id: 25,
+                name: "La Vista Fuji Kawaguchiko",
+                name_zh: "河口湖拉維斯塔酒店",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 150,
+                price_overnight_gbp_high: 401,
+                meal_plan_details: "Yes (8-course Western dinner and a buffet breakfast)",
+                room_types_and_packages: "Modern guest rooms, some with private terraces and hot spring baths. Four free private hot spring rooms (first-come, first-served).",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "Kawaguchiko Station (shuttle service)",
+                time_from_tokyo: "~2-2.5 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Kawaguchiko Station (approx. 2 hours), then use the hotel shuttle service.",
+                google_maps_link: "https://maps.app.goo.gl/RXg4Z8XQ1Y2Z7Xg4Y", // Example link
+                usp: "Excellent Mount Fuji views. Uniquely designed to resemble a 'French castle'. Offers four free private hot spring rooms available 24 hours a day.",
+                sentiment: "Chinese travelers consistently praise the 'super good location, you can see Mount Fuji, and the overall environment is great!'",
+                booking_url: "https://www.hotespa.net/resort/kawaguchiko/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["restaurant"],
+                map_coords: { x: 70, y: 400 }
+            },
+            {
+                id: 26,
+                name: "Kozantei Ubuya",
+                name_zh: "湖山亭產屋",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 600,
+                price_overnight_gbp_high: 844, // 90,200 JPY
+                meal_plan_details: "Yes (Seasonal Kaiseki Dinner & Japanese Breakfast)",
+                room_types_and_packages: "All rooms offer panoramic Fuji and lake views, many with private open-air baths.",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "5 stars",
+                google_rating: 4.6,
+                booking_rating: "9.3",
+                nearest_station: "Kawaguchiko Station (5 min by shuttle)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Kawaguchiko Station (approx. 2 hours), then a 5-minute shuttle ride.",
+                google_maps_link: "https://maps.app.goo.gl/SXg4Z8XQ1Y2Z7Xg4Z", // Example link
+                usp: "A high-end ryokan where every room is designed to provide a direct, panoramic view of both Mount Fuji and Lake Kawaguchiko.",
+                sentiment: "The height of luxury and views. Guests feel the high price is justified by the unparalleled views from their room and private bath, excellent service, and delicious dining.",
+                booking_url: "https://www.ubuya.co.jp/en/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["sauna", "restaurant", "gift_shop"],
+                map_coords: { x: 65, y: 450 }
+            },
+            {
+                id: 27,
+                name: "Fufu Kawaguchiko",
+                name_zh: "馥府河口湖",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 400,
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "Yes (Exquisite Japanese cuisine, kaiseki and teppanyaki)",
+                room_types_and_packages: "All rooms feature private open-air hot springs and offer unparalleled views of Mount Fuji. Fireplace on the terrace.",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "N/A (located near Lake Kawaguchiko)",
+                time_from_tokyo: "~2-2.5 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Kawaguchiko Station (approx. 2 hours). Taxi or local bus to the hotel near Lake Kawaguchiko.",
+                google_maps_link: "https://maps.app.goo.gl/TXg4Z8XQ1Y2Z7Xg4a", // Example link
+                usp: "All rooms feature private open-air hot springs and offer unparalleled views of Mount Fuji. Distinctive fireplace on the terrace.",
+                sentiment: "Chinese travelers praise the 'five-star service from the staff!' and note that the 'dinner was very exquisite'.",
+                booking_url: "https://www.fufukawaguchiko.jp/en/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["spa_services", "restaurant"],
+                map_coords: { x: 55, y: 380 }
+            },
+            {
+                id: 28,
+                name: "Hotel Kaneyamaen",
+                name_zh: "酒店金山園",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 150, // ¥28,600
+                price_overnight_gbp_high: 1600, // ¥324,500
+                meal_plan_details: "N/A",
+                room_types_and_packages: "Some room types provide Mount Fuji views or are equipped with private open-air baths.",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "N/A (located near Lake Kawaguchiko)",
+                time_from_tokyo: "~2-2.5 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Fujiyoshida or Kawaguchiko Station (approx. 2 hours). Taxi or local bus from there. Free parking available.",
+                google_maps_link: "https://maps.app.goo.gl/UXg4Z8XQ1Y2Z7Xg4b", // Example link
+                usp: "Recognized as one of Japan's top 100 hot spring hotels in 2024. Expansive 8-hectare Japanese garden with seasonal scenery.",
+                sentiment: "Chinese travelers commend the 'first-class accommodation, cleanliness, and service attitude,' noting that staff even introduce dishes in Chinese.",
+                booking_url: "https://www.kaneyamaen.com/en/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["restaurant"],
+                map_coords: { x: 90, y: 420 }
+            },
+            {
+                id: 29,
+                name: "Mizuno Hotel",
+                name_zh: "水野酒店",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 145,
+                price_overnight_gbp_high: 279,
+                meal_plan_details: "Yes (delicious breakfast mentioned)",
+                room_types_and_packages: "Luxury rooms. Reservable rooftop bath.",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "N/A (shuttle service available, located atop a small hill)",
+                time_from_tokyo: "~2-2.5 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Kawaguchiko Station (approx. 2 hours). Shuttle service available from the station to the hotel (located atop a small hill).",
+                google_maps_link: "https://maps.app.goo.gl/VXg4Z8XQ1Y2Z7Xg4c", // Example link
+                usp: "Blends trendy design and classic ryokan hospitality. Uniquely positioned atop a small hill, offering a reservable rooftop bath with breathtaking views.",
+                sentiment: "Chinese traveler reviews highlight a 'unique and atmospheric lobby, friendly staff, delicious breakfast, comfortable rooms, and the view of Mount Fuji while soaking in the hot spring in the morning~ wonderful!' Praised for cleanliness, exceptional customer service, and multilingual staff.",
+                booking_url: "https://www.mizuno-hotel.com/en/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["spa_services", "restaurant"],
+                map_coords: { x: 80, y: 480 }
+            },
+            {
+                id: 30,
+                name: "Ocean Spa Fuua",
+                name_zh: "海洋水療 Fuua",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "budget",
+                price_day_use_gbp: 20, // ¥3,080
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Restaurant on site)",
+                room_types_and_packages: "N/A (Day Spa)",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: 4.1,
+                booking_rating: "N/A",
+                nearest_station: "Atami Station (8 min free shuttle)",
+                time_from_tokyo: "~1 hour",
+                detailed_transport: "From Tokyo Station, take the Tokaido Shinkansen to Atami Station (approx. 45 mins), then an 8-minute free shuttle bus.",
+                google_maps_link: "https://maps.app.goo.gl/WXg4Z8XQ1Y2Z7Xg4d", // Example link
+                usp: "Features Japan's largest open-air standing bath, an 'Infinity Bath' that appears to merge with the Pacific Ocean.",
+                sentiment: "The Infinity Bath offers a unique and unforgettable experience, making guests feel as if they are floating in the sea. A modern and stylish spa with incredible ocean views.",
+                booking_url: "https://www.fuua.jp/en/",
+                bath_types: ["open-air", "indoor", "chloride"],
+                amenities: ["restaurant"],
+                map_coords: { x: 60, y: 500 }
+            },
+            {
+                id: 31,
+                name: "Shuzenji Onsen Katsuragawa",
+                name_zh: "修善寺溫泉桂川",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 87,
+                price_overnight_gbp_high: 166,
+                meal_plan_details: "N/A (restaurant)",
+                room_types_and_packages: "Traditional Japanese architecture and tatami-floored rooms. Private open-air baths surrounded by lush greenery.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "Very good",
+                nearest_station: "N/A (located in Shuzenji)",
+                time_from_tokyo: "~3.5 hours",
+                detailed_transport: "From Tokyo Station, take the Tokaido Shinkansen to Mishima Station, then transfer to the Izuhakone Railway to Shuzenji Station. Local bus or taxi to the ryokan.",
+                google_maps_link: "https://maps.app.goo.gl/YXg4Z8XQ1Y2Z7Xg4e", // Example link
+                usp: "Serene retreat enveloped by nature. Private open-air baths surrounded by lush greenery.",
+                sentiment: "Reviews indicate very good ratings for cleanliness, service, and value for money. Pet-friendly upon request.",
+                booking_url: "https://www.katsuragawa.co.jp/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["restaurant"],
+                map_coords: { x: 70, y: 550 }
+            },
+            {
+                id: 32,
+                name: "Yokikan",
+                name_zh: "陽氣館",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 150,
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Local cuisine breakfast offered for extra charge)",
+                room_types_and_packages: "Standard rooms available.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "N/A (located in Ito Onsen)",
+                time_from_tokyo: "~1 hr 45 min",
+                detailed_transport: "From Tokyo Station, take the JR Ito Line to Ito Station (approx. 1 hour 45 mins). Taxi to the ryokan.",
+                google_maps_link: "https://maps.app.goo.gl/ZXg4Z8XQ1Y2Z7Xg4f", // Example link
+                usp: "Guests reach baths via a self-operated mountain tram. Outdoor bath offers spectacular views of Ito town and the distant horizon. Spring water is bitter and rich in chlorides, free-flowing, undiluted.",
+                sentiment: "Unique and exciting bath access experience, theme park-like sensation.",
+                booking_url: "https://www.yokikan.co.jp/",
+                bath_types: ["open-air", "indoor", "chloride"],
+                amenities: ["restaurant"],
+                map_coords: { x: 80, y: 580 }
+            },
+            {
+                id: 33,
+                name: "Kuroneiwa-buro",
+                name_zh: "黑根岩風呂",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "budget",
+                price_day_use_gbp: 3, // ¥600
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A",
+                room_types_and_packages: "N/A (Day Spa)",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A (Day Spa)",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "Izu-hokkawa Station (7 min walk)",
+                time_from_tokyo: "~1 hr 45 min",
+                detailed_transport: "From Tokyo Station, take the Odoriko Limited Express to Izu-hokkawa Station (approx. 2 hours 30 mins), then a 7-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/aXg4Z8XQ1Y2Z7Xg4g", // Example link
+                usp: "Outdoor bathing spot renowned for its amazing views of waves crashing directly against the shore. Now gender-segregated.",
+                sentiment: "Stunning coastal views.",
+                booking_url: "https://www.hokkawa-onsen.com/onsen/kuroneiwa/",
+                bath_types: ["open-air"],
+                amenities: [],
+                map_coords: { x: 90, y: 520 }
+            },
+            {
+                id: 34,
+                name: "Tokaikan",
+                name_zh: "東海館",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "budget",
+                price_day_use_gbp: 1, // ¥200
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A",
+                room_types_and_packages: "N/A (No overnight stays)",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A (Former Ryokan/Day Spa)",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "JR Line Ito Station (7 min walk)",
+                time_from_tokyo: "~1 hr 45 min",
+                detailed_transport: "From Tokyo Station, take the JR Ito Line to Ito Station (approx. 1 hour 45 mins), then a 7-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/bXg4Z8XQ1Y2Z7Xg4h", // Example link
+                usp: "Former onsen ryokan (1928), now a historical and traditional Japanese architectural experience. Baths open on weekends and national holidays.",
+                sentiment: "Highly recommended for its historical and traditional Japanese architectural experience.",
+                booking_url: "https://itospa.com/spot/detail_10003.html",
+                bath_types: ["indoor"],
+                amenities: [],
+                map_coords: { x: 95, y: 450 }
+            },
+            {
+                id: 35,
+                name: "Tokiichiyu",
+                name_zh: "時逸湯",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 143,
+                price_overnight_gbp_high: 273,
+                meal_plan_details: "N/A",
+                room_types_and_packages: "Rooms with open-air baths and rental hot spring baths for private use.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "N/A (2.1 miles from Minamiizu center)",
+                time_from_tokyo: "~2.5-3.5 hours",
+                detailed_transport: "From Tokyo Station, take the Odoriko Limited Express to Izukyu-Shimoda Station, then local bus or taxi to Minamiizu. The ryokan is 2.1 miles from Minamiizu center.",
+                google_maps_link: "https://maps.app.goo.gl/cXg4Z8XQ1Y2Z7Xg4i", // Example link
+                usp: "Directly faces Yumigahama Beach, recognized as one of Japan's 100 greatest coastal landscapes. Offers private baths.",
+                sentiment: "Stunning beach views.",
+                booking_url: "https://www.yumigahama.co.jp/tokiichiyu/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: [],
+                map_coords: { x: 65, y: 280 }
+            },
+            {
+                id: 36,
+                name: "Kannon Onsen",
+                name_zh: "觀音溫泉",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "budget",
+                price_day_use_gbp: 69, // ¥1,300
+                price_overnight_gbp_low: 69, // ¥13,125
+                price_overnight_gbp_high: 235, // ¥45,000
+                meal_plan_details: "Yes (half board option)",
+                room_types_and_packages: "Rooms with open-air baths and rental hot spring baths for private use. Day trip bathing and reserved private baths available.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "N/A (accessible by JR Limited Express)",
+                time_from_tokyo: "~2 hours 40 mins",
+                detailed_transport: "From Tokyo Station, take the Odoriko Limited Express to Izukyu-Shimoda Station, then local bus or taxi. Total travel time approx. 2 hours 40 mins.",
+                google_maps_link: "https://maps.app.goo.gl/dXg4Z8XQ1Y2Z7Xg4j", // Example link
+                usp: "Noted for its 'skin beautification bathing' due to its strong alkali open-air bathing with pure 'kakenagashi' (never recycled) spring water.",
+                sentiment: "Skin beautification, pure spring water.",
+                booking_url: "https://kannon-onsen.com/",
+                bath_types: ["private", "open-air", "indoor", "alkaline"],
+                amenities: [],
+                map_coords: { x: 75, y: 220 }
+            },
+            {
+                id: 37,
+                name: "Shimoda Central Hotel",
+                name_zh: "下田中央酒店",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 206,
+                price_overnight_gbp_high: 392,
+                meal_plan_details: "N/A (restaurant, bar/lounge)",
+                room_types_and_packages: "Standard rooms available, coffee machine in rooms.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "Izukyu-Shimoda Station (20 min drive)",
+                time_from_tokyo: "~2.5-3.5 hours",
+                detailed_transport: "From Tokyo Station, take the Odoriko Limited Express to Izukyu-Shimoda Station (approx. 2 hours 45 mins), then a 20-minute drive.",
+                google_maps_link: "https://maps.app.goo.gl/eXg4Z8XQ1Y2Z7Xg4k", // Example link
+                usp: "Located in an undeveloped woodland area. Features a hot spring bath, outdoor pool, and sauna.",
+                sentiment: "Reviews praise the staff as polite, attentive, and friendly, providing excellent service.",
+                booking_url: "https://www.shimoda-centralhotel.co.jp/en/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["sauna", "restaurant", "pool", "bar"],
+                map_coords: { x: 85, y: 280 }
+            },
+            {
+                id: 38,
+                name: "Nonohanatei Komurasaki",
+                name_zh: "野花亭小紫",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 136, // ¥25,900
+                price_overnight_gbp_high: 305, // ¥58,300
+                meal_plan_details: "N/A",
+                room_types_and_packages: "Rooms with open-air baths.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "Izukyu-Shimoda Station (3 min walk)",
+                time_from_tokyo: "~2.5-3.5 hours",
+                detailed_transport: "From Tokyo Station, take the Odoriko Limited Express to Izukyu-Shimoda Station (approx. 2 hours 45 mins), then a 3-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/fXg4Z8XQ1Y2Z7Xg4l", // Example link
+                usp: "Five-room ryokan that maintains a calm atmosphere despite its convenient location. Offers rooms with open-air baths.",
+                sentiment: "Calm atmosphere.",
+                booking_url: "https://www.komurasaki.co.jp/",
+                bath_types: ["private", "open-air"],
+                amenities: [],
+                map_coords: { x: 95, y: 320 }
+            },
+            {
+                id: 39,
+                name: "Shimoda Yamatokan",
+                name_zh: "下田大和館",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 85,
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A",
+                room_types_and_packages: "Oceanfront guest rooms. Private hot spring baths and rental hot spring baths for private use.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "N/A",
+                google_rating: "N/A",
+                booking_rating: "N/A",
+                nearest_station: "N/A (oceanfront)",
+                time_from_tokyo: "~2.5-3.5 hours",
+                detailed_transport: "From Tokyo Station, take the Odoriko Limited Express to Izukyu-Shimoda Station (approx. 2 hours 45 mins), then local bus or taxi to Tatadohama Beach area.",
+                google_maps_link: "https://maps.app.goo.gl/gXg4Z8XQ1Y2Z7Xg4m", // Example link
+                usp: "Oceanfront guest rooms that command stunning views of Tatadohama Beach, famous for its beautiful white sand. Offers private baths.",
+                sentiment: "Stunning beach views, private bathing.",
+                booking_url: "https://www.yamatokan.co.jp/en/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: [],
+                map_coords: { x: 70, y: 350 }
+            },
+            {
+                id: 40,
+                name: "Oedo Onsen Monogatari Urayasu Mangekyo",
+                name_zh: "大江戶溫泉物語 浦安萬華鄉",
+                region: "Other Kanto",
+                region_zh: "其他關東",
+                price: "budget",
+                price_day_use_gbp: 15, // ¥2,000-¥2,500
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Food court on site)",
+                room_types_and_packages: "N/A (Day Spa), various themed baths.",
+                fuji_view: false,
+                tattoo_friendly: false, // Generally not allowed in public areas, but check private bath availability
+                hotel_star: "N/A (Day Spa)",
+                google_rating: 3.9,
+                booking_rating: "N/A",
+                nearest_station: "Shin-Urayasu Station (free shuttle)",
+                time_from_tokyo: "~30-40 mins",
+                detailed_transport: "From Tokyo Station, take the Keiyo Line to Shin-Urayasu Station (approx. 17 mins), then a free shuttle bus to the facility.",
+                google_maps_link: "https://maps.app.goo.gl/hXg4Z8XQ1Y2Z7Xg4n",
+                usp: "Large onsen theme park with a wide variety of indoor and outdoor baths, including unique themed baths.",
+                sentiment: "Popular for families and groups due to its entertainment options. Can get crowded.",
+                booking_url: "https://urayasu.ooedoonsen.jp/en/",
+                bath_types: ["open-air", "indoor", "themed"],
+                amenities: ["restaurant", "kids_area", "gift_shop"],
+                map_coords: { x: 75, y: 20 }
+            },
+            {
+                id: 41,
+                name: "Enoshima Island Spa",
+                name_zh: "江之島島嶼水療",
+                region: "Other Kanto",
+                region_zh: "其他關東",
+                price: "mid-range",
+                price_day_use_gbp: 25, // ¥3,000-¥4,000
+                price_overnight_gbp_low: "N/A",
+                price_overnight_gbp_high: "N/A",
+                meal_plan_details: "N/A (Restaurant on site)",
+                room_types_and_packages: "N/A (Day Spa), various pools and spa treatments.",
+                fuji_view: true,
+                tattoo_friendly: false, // Tattoos must be covered
+                hotel_star: "N/A (Day Spa)",
+                google_rating: 4.0,
+                booking_rating: "N/A",
+                nearest_station: "Katase-Enoshima Station (10 min walk)",
+                time_from_tokyo: "~1 hour",
+                detailed_transport: "From Shinjuku, take the Odakyu Romancecar to Katase-Enoshima Station (approx. 60 mins), then a 10-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/iXg4Z8XQ1Y2Z7Xg4o",
+                usp: "Oceanfront spa with natural hot springs and pools, offering views of Mount Fuji and the Pacific Ocean.",
+                sentiment: "Praised for its stunning views and relaxing atmosphere. Can be a good day trip from Tokyo.",
+                booking_url: "https://enoshimaislandspa.com/",
+                bath_types: ["open-air", "indoor", "pool"],
+                amenities: ["spa_services", "restaurant", "bar"],
+                map_coords: { x: 85, y: 70 }
+            },
+            {
+                id: 42,
+                name: "Hakone Hotel",
+                name_zh: "箱根酒店",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 180,
+                price_overnight_gbp_high: 350,
+                meal_plan_details: "Yes (Breakfast & Dinner options)",
+                room_types_and_packages: "Western and Japanese-style rooms, some with lake views.",
+                fuji_view: true, // From some rooms/areas
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: 4.1,
+                booking_rating: "8.3",
+                nearest_station: "Hakone-machi-ko (Lake Ashi boat pier, 5 min walk)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Shinjuku, take Odakyu Romancecar to Hakone-Yumoto, then bus to Hakone-machi-ko. 5-minute walk from the pier.",
+                google_maps_link: "https://maps.app.goo.gl/jXg4Z8XQ1Y2Z7Xg4p",
+                usp: "Lakeside hotel with views of Lake Ashi and Mount Fuji. Offers natural hot spring baths.",
+                sentiment: "Guests appreciate the scenic location and the quality of the meals. Good base for exploring Hakone.",
+                booking_url: "https://www.hakonehotel.jp/en/",
+                bath_types: ["indoor"],
+                amenities: ["restaurant", "bar"],
+                map_coords: { x: 70, y: 580 }
+            },
+            {
+                id: 43,
+                name: "Yumoto Fujiya Hotel",
+                name_zh: "湯本富士屋酒店",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 160,
+                price_overnight_gbp_high: 300,
+                meal_plan_details: "Yes (Breakfast & Dinner options)",
+                room_types_and_packages: "Western and Japanese-style rooms.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: 4.0,
+                booking_rating: "8.1",
+                nearest_station: "Hakone-Yumoto Station (3 min walk)",
+                time_from_tokyo: "~90 mins",
+                detailed_transport: "From Shinjuku, take Odakyu Romancecar to Hakone-Yumoto Station (approx. 85 mins), then a 3-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/kXg4Z8XQ1Y2Z7Xg4q",
+                usp: "Conveniently located near Hakone-Yumoto station. Offers a variety of hot spring baths and dining options.",
+                sentiment: "Praised for its accessibility and range of facilities. A solid choice for a comfortable stay.",
+                booking_url: "https://www.fujiyahotel.jp/en/yumoto/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["restaurant", "bar", "pool"],
+                map_coords: { x: 25, y: 580 }
+            },
+            {
+                id: 44,
+                name: "Hotel Indigo Hakone Gora",
+                name_zh: "箱根強羅英迪格酒店",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 300,
+                price_overnight_gbp_high: 600,
+                meal_plan_details: "Yes (Breakfast options, fine dining)",
+                room_types_and_packages: "Modern rooms with private open-air baths.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "5 stars",
+                google_rating: 4.5,
+                booking_rating: "8.9",
+                nearest_station: "Gora Station (15 min walk or shuttle)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Hakone-Yumoto, take Hakone Tozan Railway to Gora, then a 15-minute walk or shuttle.",
+                google_maps_link: "https://maps.app.goo.gl/lXg4Z8XQ1Y2Z7Xg4r",
+                usp: "Stylish, contemporary hotel with private onsen in every room. Located by the Haya River.",
+                sentiment: "Highly rated for its design, private baths, and excellent service. A luxurious and tranquil retreat.",
+                booking_url: "https://www.ihg.com/hotelindigo/hotels/us/en/hakone/hkgor/hoteldetail",
+                bath_types: ["private", "open-air"],
+                amenities: ["restaurant", "bar", "spa_services", "pool"],
+                map_coords: { x: 35, y: 410 }
+            },
+            {
+                id: 45,
+                name: "Ryokan Yoshiike Ryokan",
+                name_zh: "吉池旅館",
+                region: "Hakone",
+                region_zh: "箱根",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 150,
+                price_overnight_gbp_high: 300,
+                meal_plan_details: "Yes (Breakfast & Dinner options)",
+                room_types_and_packages: "Traditional Japanese rooms, some with private baths.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "3 stars",
+                google_rating: 4.2,
+                booking_rating: "8.4",
+                nearest_station: "Hakone-Yumoto Station (7 min walk)",
+                time_from_tokyo: "~90 mins",
+                detailed_transport: "From Hakone-Yumoto Station, a 7-minute walk. Also offers shuttle service.",
+                google_maps_link: "https://maps.app.goo.gl/mXg4Z8XQ1Y2Z7Xg4s",
+                usp: "Features a large, beautiful Japanese garden with a waterfall and multiple hot spring sources.",
+                sentiment: "Guests love the expansive garden and the variety of baths. A traditional and authentic ryokan experience.",
+                booking_url: "https://www.yoshiike.org/en/",
+                bath_types: ["open-air", "indoor", "private"],
+                amenities: ["restaurant", "gift_shop"],
+                map_coords: { x: 5, y: 500 }
+            },
+            {
+                id: 46,
+                name: "Hotel Associa Shizuoka",
+                name_zh: "靜岡Associa酒店",
+                region: "Other Kanto",
+                region_zh: "其他關東",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 90,
+                price_overnight_gbp_high: 180,
+                meal_plan_details: "N/A (Restaurant on site)",
+                room_types_and_packages: "Western-style rooms.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: 4.0,
+                booking_rating: "8.2",
+                nearest_station: "Shizuoka Station (direct access)",
+                time_from_tokyo: "~1 hour by Shinkansen",
+                detailed_transport: "Directly connected to Shizuoka Station via underground passage. From Tokyo Station, take Tokaido Shinkansen to Shizuoka Station (approx. 1 hour).",
+                google_maps_link: "https://maps.app.goo.gl/nXg4Z8XQ1Y2Z7Xg4t",
+                usp: "Conveniently located directly above Shizuoka Station. Offers comfortable accommodation for exploring Shizuoka and nearby onsen areas.",
+                sentiment: "Praised for its excellent location and cleanliness. Good for business or leisure travelers.",
+                booking_url: "https://www.associa.com/sth/",
+                bath_types: [],
+                amenities: ["restaurant", "bar"],
+                map_coords: { x: 60, y: 70 }
+            },
+            {
+                id: 47,
+                name: "Hotel New Grand",
+                name_zh: "新格蘭酒店",
+                region: "Other Kanto",
+                region_zh: "其他關東",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 120,
+                price_overnight_gbp_high: 250,
+                meal_plan_details: "N/A (Multiple restaurants on site)",
+                room_types_and_packages: "Classic Western-style rooms.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: 4.3,
+                booking_rating: "8.5",
+                nearest_station: "Motomachi-Chukagai Station (1 min walk)",
+                time_from_tokyo: "~45 mins",
+                detailed_transport: "From Tokyo Station, take the JR Tokaido Line to Yokohama, then transfer to Minatomirai Line to Motomachi-Chukagai Station (approx. 45 mins total). 1-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/oXg4Z8XQ1Y2Z7Xg4u",
+                usp: "Historic hotel in Yokohama with elegant architecture and waterfront views. Close to Yamashita Park.",
+                sentiment: "Guests appreciate the classic ambiance and prime location. Excellent service and comfortable rooms.",
+                booking_url: "https://www.hotel-newgrand.co.jp/eng/",
+                bath_types: [],
+                amenities: ["restaurant", "bar"],
+                map_coords: { x: 90, y: 40 }
+            },
+            {
+                id: 48,
+                name: "Atami Furuya Ryokan",
+                name_zh: "熱海古屋旅館",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 250,
+                price_overnight_gbp_high: 500,
+                meal_plan_details: "Yes (Kaiseki Dinner & Breakfast)",
+                room_types_and_packages: "Traditional Japanese rooms, some with private open-air baths.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: 4.3,
+                booking_rating: "8.6",
+                nearest_station: "Atami Station (10 min walk or shuttle)",
+                time_from_tokyo: "~1 hour",
+                detailed_transport: "From Tokyo Station, take Tokaido Shinkansen to Atami Station (approx. 45 mins), then a 10-minute walk or shuttle.",
+                google_maps_link: "https://maps.app.goo.gl/pXg4Z8XQ1Y2Z7Xg4v",
+                usp: "Historic ryokan in Atami with a long-standing tradition. Features beautiful gardens and diverse hot spring baths.",
+                sentiment: "Praised for its authentic atmosphere, excellent food, and relaxing baths. A true traditional ryokan experience.",
+                booking_url: "https://www.atami-furuya.co.jp/en/",
+                bath_types: ["open-air", "indoor", "private"],
+                amenities: ["restaurant", "gift_shop"],
+                map_coords: { x: 55, y: 520 }
+            },
+            {
+                id: 49,
+                name: "Hotel Micuras",
+                name_zh: "酒店Micuras",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 180,
+                price_overnight_gbp_high: 350,
+                meal_plan_details: "N/A (Restaurant on site)",
+                room_types_and_packages: "Western-style rooms, some with ocean views.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: 4.2,
+                booking_rating: "8.5",
+                nearest_station: "Atami Station (5 min walk)",
+                time_from_tokyo: "~1 hour",
+                detailed_transport: "From Tokyo Station, take Tokaido Shinkansen to Atami Station (approx. 45 mins), then a 5-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/qXg4Z8XQ1Y2Z7Xg4w",
+                usp: "Modern hotel with ocean views. Features a rooftop open-air bath overlooking Sagami Bay.",
+                sentiment: "Guests love the ocean views from the baths and rooms. Clean and stylish accommodation.",
+                booking_url: "https://www.micuras.jp/en/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["restaurant", "bar"],
+                map_coords: { x: 70, y: 470 }
+            },
+            {
+                id: 50,
+                name: "Hotel New Akao",
+                name_zh: "新赤尾酒店",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 150,
+                price_overnight_gbp_high: 300,
+                meal_plan_details: "Yes (Breakfast & Dinner options)",
+                room_types_and_packages: "Oceanfront rooms.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "3 stars",
+                google_rating: 4.0,
+                booking_rating: "8.0",
+                nearest_station: "Atami Station (free shuttle)",
+                time_from_tokyo: "~1 hour",
+                detailed_transport: "From Atami Station, free shuttle bus available.",
+                google_maps_link: "https://maps.app.goo.gl/rXg4Z8XQ1Y2Z7Xg4x",
+                usp: "Large resort hotel built into a cliffside, offering panoramic ocean views and extensive facilities.",
+                sentiment: "Known for its dramatic location and ocean views. Can feel a bit dated but offers a grand experience.",
+                booking_url: "https://www.newakao.jp/en/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["restaurant", "bar", "pool", "gift_shop", "kids_area"],
+                map_coords: { x: 85, y: 550 }
+            },
+            {
+                id: 51,
+                name: "Hotel Sun Hatoya",
+                name_zh: "太陽鳩屋酒店",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "budget",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 70,
+                price_overnight_gbp_high: 150,
+                meal_plan_details: "Yes (Breakfast & Dinner options)",
+                room_types_and_packages: "Japanese and Western-style rooms.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "3 stars",
+                google_rating: 3.8,
+                booking_rating: "7.5",
+                nearest_station: "Ito Station (free shuttle)",
+                time_from_tokyo: "~1 hr 45 min",
+                detailed_transport: "From Ito Station, free shuttle bus available.",
+                google_maps_link: "https://maps.app.goo.gl/sXg4Z8XQ1Y2Z7Xg4y",
+                usp: "Famous for its underwater hot spring bath with a view of marine life. Offers various entertainment facilities.",
+                sentiment: "Unique bathing experience with fish. Can be a nostalgic retro experience.",
+                booking_url: "https://www.sunhatoya.co.jp/en/",
+                bath_types: ["indoor", "unique"],
+                amenities: ["restaurant", "pool", "kids_area", "gift_shop"],
+                map_coords: { x: 50, y: 580 }
+            },
+            {
+                id: 52,
+                name: "Izu Kogen Onsen Hotel",
+                name_zh: "伊豆高原溫泉酒店",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 100,
+                price_overnight_gbp_high: 200,
+                meal_plan_details: "Yes (Breakfast & Dinner options)",
+                room_types_and_packages: "Japanese and Western-style rooms.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "3 stars",
+                google_rating: 4.0,
+                booking_rating: "8.0",
+                nearest_station: "Izu-Kogen Station (free shuttle)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Tokyo Station, take Odoriko Limited Express to Izu-Kogen Station (approx. 2 hours), then free shuttle.",
+                google_maps_link: "https://maps.app.goo.gl/tXg4Z8XQ1Y2Z7Xg4z",
+                usp: "Located in the scenic Izu Kogen area, offering tranquil hot spring baths and local cuisine.",
+                sentiment: "Guests enjoy the peaceful setting and the quality of the onsen. Good value for a relaxing stay.",
+                booking_url: "https://www.izukogen-hotel.jp/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["restaurant"],
+                map_coords: { x: 65, y: 600 }
+            },
+            {
+                id: 53,
+                name: "Dormy Inn Mishima",
+                name_zh: "多美迎酒店三島",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "budget",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 60,
+                price_overnight_gbp_high: 120,
+                meal_plan_details: "Yes (Complimentary ramen at night)",
+                room_types_and_packages: "Compact Western-style rooms.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "3 stars",
+                google_rating: 4.2,
+                booking_rating: "8.6",
+                nearest_station: "Mishima Station (5 min walk)",
+                time_from_tokyo: "~1 hour",
+                detailed_transport: "From Tokyo Station, take Tokaido Shinkansen to Mishima Station (approx. 50 mins), then a 5-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/uXg4Z8XQ1Y2Z7Xg4A1",
+                usp: "Business hotel with a natural hot spring bath. Offers complimentary ramen and laundry facilities.",
+                sentiment: "Highly praised for its clean facilities, hot spring bath, and complimentary amenities. Excellent value for money.",
+                booking_url: "https://www.hotespa.net/hotels/mishima/",
+                bath_types: ["indoor"],
+                amenities: ["restaurant", "laundry"],
+                map_coords: { x: 80, y: 620 }
+            },
+            {
+                id: 54,
+                name: "Hotel Laforet Shuzenji",
+                name_zh: "修善寺拉佛雷酒店",
+                region: "Izu Peninsula",
+                region_zh: "伊豆半島",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 120,
+                price_overnight_gbp_high: 250,
+                meal_plan_details: "N/A (Restaurant on site)",
+                room_types_and_packages: "Western and Japanese-style rooms.",
+                fuji_view: false,
+                tattoo_friendly: false,
+                hotel_star: "3 stars",
+                google_rating: 3.9,
+                booking_rating: "7.8",
+                nearest_station: "Shuzenji Station (free shuttle)",
+                time_from_tokyo: "~3.5 hours",
+                detailed_transport: "From Shuzenji Station, free shuttle bus available (approx. 15 mins).",
+                google_maps_link: "https://maps.app.goo.gl/vXg4Z8XQ1Y2Z7Xg4B1",
+                usp: "Resort hotel surrounded by nature, offering various sports facilities and hot spring baths.",
+                sentiment: "Good for families and those seeking outdoor activities. Relaxing onsen experience.",
+                booking_url: "https://www.laforet.co.jp/shuzenji/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["restaurant", "pool", "sports_facilities"],
+                map_coords: { x: 95, y: 600 }
+            },
+            {
+                id: 55,
+                name: "Kawaguchiko Station Inn",
+                name_zh: "河口湖站旅館",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "budget",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 40,
+                price_overnight_gbp_high: 80,
+                meal_plan_details: "N/A (Shared kitchen available)",
+                room_types_and_packages: "Dormitory beds, private Japanese-style rooms.",
+                fuji_view: true, // From some rooms/rooftop
+                tattoo_friendly: true, // Check with staff
+                hotel_star: "1 star",
+                google_rating: 4.1,
+                booking_rating: "8.0",
+                nearest_station: "Kawaguchiko Station (1 min walk)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Kawaguchiko Station (approx. 2 hours), then a 1-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/wXg4Z8XQ1Y2Z7Xg4C1",
+                usp: "Budget-friendly accommodation directly opposite Kawaguchiko Station, offering basic rooms and a rooftop terrace with Fuji views.",
+                sentiment: "Highly convenient location. Great for budget travelers and backpackers seeking Fuji views.",
+                booking_url: "https://kawaguchiko-stationinn.com/",
+                bath_types: ["shared_bath"],
+                amenities: ["shared_kitchen"],
+                map_coords: { x: 60, y: 50 }
+            },
+            {
+                id: 56,
+                name: "K's House Fuji",
+                name_zh: "K之家富士",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "budget",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 30,
+                price_overnight_gbp_high: 60,
+                meal_plan_details: "N/A (Shared kitchen available)",
+                room_types_and_packages: "Dormitory beds, private rooms.",
+                fuji_view: true, // From some areas
+                tattoo_friendly: true, // Generally tattoo friendly hostel
+                hotel_star: "2 stars",
+                google_rating: 4.5,
+                booking_rating: "9.0",
+                nearest_station: "Kawaguchiko Station (15 min walk)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Shinjuku, take the Highway Bus to Kawaguchiko Station (approx. 2 hours), then a 15-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/xXg4Z8XQ1Y2Z7Xg4D1",
+                usp: "Popular hostel with a friendly atmosphere, offering communal spaces and views of Mount Fuji.",
+                sentiment: "Highly rated for its cleanliness, friendly staff, and social atmosphere. Great for solo travelers.",
+                booking_url: "https://kshouse.jp/fuji-e/",
+                bath_types: ["shared_bath"],
+                amenities: ["shared_kitchen", "bar"],
+                map_coords: { x: 70, y: 80 }
+            },
+            {
+                id: 57,
+                name: "Fuji Onsenji Yumedono Ryokan",
+                name_zh: "富士溫泉寺夢殿旅館",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 400,
+                price_overnight_gbp_high: 800,
+                meal_plan_details: "Yes (Kaiseki Dinner & Breakfast)",
+                room_types_and_packages: "Luxury Japanese-style rooms, all with private open-air baths.",
+                fuji_view: false,
+                tattoo_friendly: true, // Private baths
+                hotel_star: "5 stars",
+                google_rating: 4.6,
+                booking_rating: "9.1",
+                nearest_station: "Kawaguchiko Station (5 min drive, free shuttle)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Kawaguchiko Station, free shuttle service available.",
+                google_maps_link: "https://maps.app.goo.gl/yXg4Z8XQ1Y2Z7Xg4E1",
+                usp: "Exclusive ryokan offering private open-air baths in every suite, ensuring ultimate privacy and luxury.",
+                sentiment: "Guests rave about the privacy, exceptional service, and exquisite cuisine. A top choice for a romantic getaway.",
+                booking_url: "https://yumedono.jp/en/",
+                bath_types: ["private", "open-air"],
+                amenities: ["restaurant", "spa_services"],
+                map_coords: { x: 80, y: 100 }
+            },
+            {
+                id: 58,
+                name: "Konansou Hozantei",
+                name_zh: "湖南莊寶山亭",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "luxury",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 350,
+                price_overnight_gbp_high: 700,
+                meal_plan_details: "Yes (Kaiseki Dinner & Breakfast)",
+                room_types_and_packages: "Japanese-style rooms with private open-air baths and lake/Fuji views.",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "4 stars",
+                google_rating: 4.5,
+                booking_rating: "9.0",
+                nearest_station: "Kawaguchiko Station (free shuttle)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Kawaguchiko Station, free shuttle service available.",
+                google_maps_link: "https://maps.app.goo.gl/zXg4Z8XQ1Y2Z7Xg4F1",
+                usp: "Sister hotel to Konanso, offering similar high-quality service and stunning Fuji views with private bath options.",
+                sentiment: "Consistent high praise for views, service, and food quality. A luxurious and comfortable stay.",
+                booking_url: "https://www.konansou.com/hozantei/",
+                bath_types: ["private", "open-air", "indoor"],
+                amenities: ["restaurant", "gift_shop"],
+                map_coords: { x: 90, y: 120 }
+            },
+            {
+                id: 59,
+                name: "Hotel Regina Kawaguchiko",
+                name_zh: "河口湖雷吉娜酒店",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 100,
+                price_overnight_gbp_high: 200,
+                meal_plan_details: "Yes (Breakfast & Dinner options)",
+                room_types_and_packages: "Western and Japanese-style rooms, some with Fuji views.",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "3 stars",
+                google_rating: 3.9,
+                booking_rating: "7.9",
+                nearest_station: "Kawaguchiko Station (free shuttle)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Kawaguchiko Station, free shuttle service available.",
+                google_maps_link: "https://maps.app.goo.gl/0Xg4Z8XQ1Y2Z7Xg4G1",
+                usp: "Offers comfortable rooms with Mount Fuji views and hot spring baths. Good value for money.",
+                sentiment: "Guests appreciate the views and the reasonable pricing. A practical choice for Fuji area.",
+                booking_url: "https://www.regina-kawaguchiko.com/en/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["restaurant", "pool"],
+                map_coords: { x: 65, y: 180 }
+            },
+            {
+                id: 60,
+                name: "Hotel Mystays Fuji Onsen Resort",
+                name_zh: "富士溫泉度假酒店",
+                region: "Mount Fuji Region",
+                region_zh: "富士山周邊",
+                price: "mid-range",
+                price_day_use_gbp: "N/A",
+                price_overnight_gbp_low: 80,
+                price_overnight_gbp_high: 180,
+                meal_plan_details: "N/A (Restaurant on site)",
+                room_types_and_packages: "Modern Western-style rooms, some with Fuji views.",
+                fuji_view: true,
+                tattoo_friendly: false,
+                hotel_star: "3 stars",
+                google_rating: 4.1,
+                booking_rating: "8.3",
+                nearest_station: "Kawaguchiko Station (5 min walk)",
+                time_from_tokyo: "~2 hours",
+                detailed_transport: "From Kawaguchiko Station, a 5-minute walk.",
+                google_maps_link: "https://maps.app.goo.gl/1Xg4Z8XQ1Y2Z7Xg4H1",
+                usp: "Conveniently located near Kawaguchiko Station, offering modern rooms and hot spring baths with Fuji views.",
+                sentiment: "Highly praised for its location and views. A popular choice for independent travelers.",
+                booking_url: "https://www.mystays.com/hotel-mystays-fuji-onsen-resort-yamanashi/",
+                bath_types: ["open-air", "indoor"],
+                amenities: ["restaurant"],
+                map_coords: { x: 50, y: 120 }
+            }
+        ];
+
+        let selectedOnsenForComparison = new Set();
+        let favoriteOnsenIds = new Set(JSON.parse(localStorage.getItem('favoriteOnsenIds') || '[]'));
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('onsen-grid');
+            const regionFilter = document.getElementById('region-filter');
+            const priceFilter = document.getElementById('price-filter');
+            const fujiViewFilter = document.getElementById('fuji-view-filter');
+            const tattooFilter = document.getElementById('tattoo-filter');
+            const bathTypeFilter = document.getElementById('bath-type-filter');
+            const amenityFilter = document.getElementById('amenity-filter');
+            const sortBy = document.getElementById('sort-by');
+            const resetFiltersBtn = document.getElementById('reset-filters');
+            const modal = document.getElementById('onsen-modal');
+            const closeModalBtn = document.getElementById('close-modal');
+
+            const recommendationInput = document.getElementById('recommendation-input');
+            const getRecommendationBtn = document.getElementById('get-recommendation-btn');
+            const recommendationOutput = document.getElementById('recommendation-output');
+            const recommendationText = document.getElementById('recommendation-text');
+            const recommendationLoading = document.getElementById('recommendation-loading');
+
+            const etiquetteInput = document.getElementById('etiquette-input');
+            const getEtiquetteBtn = document.getElementById('get-etiquette-btn');
+            const etiquetteOutput = document.getElementById('etiquette-output');
+            const etiquetteText = document.getElementById('etiquette-text');
+            const etiquetteLoading = document.getElementById('etiquette-loading');
+
+            const compareSelectedBtn = document.getElementById('compare-selected-btn');
+            const compareCountSpan = document.getElementById('compare-count');
+            const compareModal = document.getElementById('compare-modal');
+            const closeCompareModalBtn = document.getElementById('close-compare-modal');
+            const compareBody = document.getElementById('compare-body');
+            const compareTable = document.getElementById('compare-table');
+            const compareEmptyMessage = document.getElementById('compare-empty-message');
+
+            const viewFavoritesBtn = document.getElementById('view-favorites-btn');
+            const favoriteCountSpan = document.getElementById('favorite-count');
+            const favoritesModal = document.getElementById('favorites-modal');
+            const closeFavoritesModalBtn = document.getElementById('close-favorites-modal');
+            const favoritesBody = document.getElementById('favorites-body');
+            const favoritesEmptyMessage = document.getElementById('favorites-empty-message');
+
+            const onsenMap = document.getElementById('onsen-map');
+            const legendList = document.getElementById('legend-list');
+
+            let regionChart, priceChart;
+
+            function updateFavoriteCount() {
+                favoriteCountSpan.textContent = favoriteOnsenIds.size;
+            }
+
+            function toggleFavorite(onsenId) {
+                if (favoriteOnsenIds.has(onsenId)) {
+                    favoriteOnsenIds.delete(onsenId);
+                } else {
+                    favoriteOnsenIds.add(onsenId);
+                }
+                localStorage.setItem('favoriteOnsenIds', JSON.stringify(Array.from(favoriteOnsenIds)));
+                updateFavoriteCount();
+                renderGrid(filterAndSortData(onsenData)); // Re-render to update star icons
+            }
+
+            function createOnsenCard(onsen) {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl shadow-md overflow-hidden transform hover:-translate-y-1 transition-transform duration-300 cursor-pointer flex flex-col';
+                card.dataset.id = onsen.id;
+
+                let tagsHtml = '';
+                if (onsen.fuji_view) tagsHtml += `<span class="tag tag-fuji">Fuji View (富士山景觀)</span>`;
+                if (onsen.tattoo_friendly) tagsHtml += `<span class="tag tag-tattoo">Tattoo OK (紋身友好)</span>`;
+                if (onsen.price === 'luxury') tagsHtml += `<span class="tag tag-luxury">Luxury (高級)</span>`;
+                if (onsen.price === 'budget') tagsHtml += `<span class="tag tag-budget">Budget (實惠)</span>`;
+                if (onsen.hotel_star && onsen.hotel_star.includes('Day Spa')) tagsHtml += `<span class="tag tag-daytrip">Day Trip (日帰り)</span>`;
+                // Defensive checks for bath_types and amenities
+                if (Array.isArray(onsen.bath_types) && onsen.bath_types.includes('private')) tagsHtml += `<span class="tag tag-private">Private Bath (私人浴池)</span>`;
+                if (Array.isArray(onsen.amenities) && onsen.amenities.includes('sauna')) tagsHtml += `<span class="tag tag-sauna">Sauna (桑拿)</span>`;
+                if (Array.isArray(onsen.amenities) && onsen.amenities.includes('restaurant')) tagsHtml += `<span class="tag tag-restaurant">Restaurant (餐廳)</span>`;
+                if (Array.isArray(onsen.amenities) && onsen.amenities.includes('24_hour')) tagsHtml += `<span class="tag tag-24hr">24-Hour (24小時)</span>`;
+
+
+                const isFavorited = favoriteOnsenIds.has(onsen.id);
+                const favoriteStarClass = isFavorited ? 'favorited' : '';
+
+                card.innerHTML = `
+                    <div class="p-6 flex-grow">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="tracking-wide text-sm text-blue-500 font-semibold">${onsen.region} (${onsen.region_zh})</div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-lg font-bold text-gray-800">£${onsen.price_day_use_gbp !== "N/A" ? onsen.price_day_use_gbp : onsen.price_overnight_gbp_low}+</span>
+                                <input type="checkbox" class="compare-checkbox form-checkbox h-5 w-5 text-purple-600 rounded" data-id="${onsen.id}" ${selectedOnsenForComparison.has(onsen.id) ? 'checked' : ''}>
+                                <span class="star-icon text-2xl ${favoriteStarClass}" data-id="${onsen.id}">★</span>
+                            </div>
+                        </div>
+                        <h3 class="block mt-1 text-xl leading-tight font-bold text-black">${onsen.name} (${onsen.name_zh})</h3>
+                        <p class="mt-2 text-gray-600 text-sm">${onsen.usp}</p>
+                        <div class="mt-4 flex flex-wrap">
+                           ${tagsHtml}
+                        </div>
+                    </div>
+                `;
+                // Make the entire card clickable for details, except for specific interactive elements
+                card.addEventListener('click', (e) => {
+                    // Check if the click target is the checkbox or star icon itself, or a descendant of them
+                    const target = e.target;
+                    const isInteractiveElement = target.classList.contains('compare-checkbox') ||
+                                                 target.classList.contains('star-icon');
+                    
+                    if (!isInteractiveElement) {
+                        showModal(onsen.id);
+                    }
+                });
+                // Event listeners for compare checkbox and favorite star remain as they were
+                card.querySelector('.compare-checkbox').addEventListener('change', (e) => {
+                    e.stopPropagation(); // Prevent card click from triggering modal
+                    const id = parseInt(e.target.dataset.id);
+                    if (e.target.checked) {
+                        if (selectedOnsenForComparison.size < 3) {
+                            selectedOnsenForComparison.add(id);
+                        } else {
+                            e.target.checked = false; // Uncheck if already 3 selected
+                            // Optional: show a message to the user that max 3 can be selected
+                        }
+                    } else {
+                        selectedOnsenForComparison.delete(id);
+                    }
+                    updateCompareCount();
+                });
+                card.querySelector('.star-icon').addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent card click from triggering modal
+                    toggleFavorite(onsen.id);
+                });
+                return card;
+            }
+
+            function renderGrid(filteredData) {
+                grid.innerHTML = '';
+                if (filteredData.length === 0) {
+                    grid.innerHTML = '<p class="text-center text-gray-600 col-span-full">No onsen found matching your criteria.</p>';
+                }
+                filteredData.forEach(onsen => {
+                    grid.appendChild(createOnsenCard(onsen));
+                });
+            }
+
+            function updateCompareCount() {
+                compareCountSpan.textContent = selectedOnsenForComparison.size;
+            }
+
+            function filterAndSortData(data) {
+                const region = regionFilter.value;
+                const price = priceFilter.value;
+                const fuji = fujiViewFilter.value;
+                const tattoo = tattooFilter.value;
+                const bathType = bathTypeFilter.value;
+                const amenity = amenityFilter.value;
+                const sortOrder = sortBy.value;
+
+                let filtered = data.filter(o => {
+                    const regionMatch = region === 'all' || o.region === region;
+                    const priceMatch = price === 'all' || o.price === price;
+                    const fujiMatch = fuji === 'all' || (fuji === 'yes' && o.fuji_view) || (fuji === 'no' && !o.fuji_view);
+                    const tattooMatch = tattoo === 'all' || (tattoo === 'yes' && o.tattoo_friendly) || (tattoo === 'no' && !o.tattoo_friendly);
+                    // Defensive checks for bath_types and amenities
+                    const bathTypeMatch = bathType === 'all' || (Array.isArray(o.bath_types) && o.bath_types.includes(bathType));
+                    const amenityMatch = amenity === 'all' || (Array.isArray(o.amenities) && o.amenities.includes(amenity));
+                    return regionMatch && priceMatch && fujiMatch && tattooMatch && bathTypeMatch && amenityMatch;
+                });
+
+                // Sort logic
+                if (sortOrder !== 'default') {
+                    filtered.sort((a, b) => {
+                        if (sortOrder === 'price_asc') {
+                            const priceA = a.price_overnight_gbp_low !== "N/A" ? a.price_overnight_gbp_low : (a.price_day_use_gbp !== "N/A" ? a.price_day_use_gbp : Infinity);
+                            const priceB = b.price_overnight_gbp_low !== "N/A" ? b.price_overnight_gbp_low : (b.price_day_use_gbp !== "N/A" ? b.price_day_use_gbp : Infinity);
+                            return priceA - priceB;
+                        } else if (sortOrder === 'price_desc') {
+                            const priceA = a.price_overnight_gbp_low !== "N/A" ? a.price_overnight_gbp_low : (a.price_day_use_gbp !== "N/A" ? a.price_day_use_gbp : -Infinity);
+                            const priceB = b.price_overnight_gbp_low !== "N/A" ? b.price_overnight_gbp_low : (b.price_day_use_gbp !== "N/A" ? b.price_day_use_gbp : -Infinity);
+                            return priceB - priceA;
+                        } else if (sortOrder === 'google_rating_desc') {
+                            return (b.google_rating || 0) - (a.google_rating || 0);
+                        } else if (sortOrder === 'booking_rating_desc') {
+                            return (parseFloat(b.booking_rating) || 0) - (parseFloat(a.booking_rating) || 0);
+                        } else if (sortOrder === 'time_from_tokyo_asc') {
+                             const timeA = parseInt(a.time_from_tokyo.replace(/\D/g, '')) || Infinity;
+                             const timeB = parseInt(b.time_from_tokyo.replace(/\D/g, '')) || Infinity;
+                             return timeA - timeB;
+                        }
+                        return 0;
+                    });
+                }
+                return filtered;
+            }
+
+            function applyFiltersAndSort() {
+                const filteredAndSortedData = filterAndSortData(onsenData);
+                renderGrid(filteredAndSortedData);
+            }
+            
+            function resetFilters() {
+                regionFilter.value = 'all';
+                priceFilter.value = 'all';
+                fujiViewFilter.value = 'all';
+                tattooFilter.value = 'all';
+                bathTypeFilter.value = 'all';
+                amenityFilter.value = 'all';
+                sortBy.value = 'default';
+                selectedOnsenForComparison.clear();
+                updateCompareCount();
+                applyFiltersAndSort();
+            }
+
+            function showModal(id) {
+                const onsen = onsenData.find(o => o.id === id);
+                document.getElementById('modal-title').textContent = `${onsen.name} (${onsen.name_zh})`;
+                
+                const body = document.getElementById('modal-body');
+                body.innerHTML = `
+                    <div class="mb-6 text-center">
+                        <a href="${onsen.booking_url}" target="_blank" class="inline-block bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">
+                            Visit Website / Book Now (訪問網站 / 立即預訂)
+                        </a>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="font-bold text-lg mb-2 text-gray-800">Overview (概要)</h4>
+                            <p class="text-gray-700 mb-4">${onsen.sentiment}</p>
+                            <div class="space-y-2 text-sm">
+                                <p><strong>Region (地區):</strong> ${onsen.region} (${onsen.region_zh})</p>
+                                <p><strong>Day-Use Price (日歸價格):</strong> £${onsen.price_day_use_gbp} / adult</p>
+                                <p><strong>Overnight Price (住宿價格):</strong> £${onsen.price_overnight_gbp_low}${onsen.price_overnight_gbp_high !== "N/A" ? ' - £' + onsen.price_overnight_gbp_high : ''} / night</p>
+                                <p><strong>Hotel Star Rating (酒店星級):</strong> ${onsen.hotel_star}</p>
+                                <p><strong>Meals Included (包含餐點):</strong> ${onsen.meal_plan_details}</p>
+                                <p><strong>Room Types & Packages (房間類型與套餐):</strong> ${onsen.room_types_and_packages}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2 text-gray-800">Access & Ratings (交通與評分)</h4>
+                            <div class="space-y-2 text-sm">
+                                <p><strong>Nearest Station (最近車站):</strong> ${onsen.nearest_station}</p>
+                                <p><strong>Time from Tokyo Central (距東京市中心時間):</strong> ${onsen.time_from_tokyo}</p>
+                                <p><strong>Detailed Transport (詳細交通):</strong> ${onsen.detailed_transport}</p>
+                                <p><strong>Google Rating (Google 評分):</strong> ${onsen.google_rating} / 5.0 ⭐</p>
+                                <p><strong>Booking.com Rating (Booking.com 評分):</strong> ${onsen.booking_rating} / 10</p>
+                                <p><a href="${onsen.google_maps_link}" target="_blank" class="text-blue-600 hover:underline">View on Google Maps (在地圖上查看)</a></p>
+                            </div>
+                            <div class="mt-4 flex flex-wrap">
+                                ${onsen.fuji_view ? '<span class="tag tag-fuji">Fuji View (富士山景觀)</span>' : ''}
+                                ${onsen.tattoo_friendly ? '<span class="tag tag-tattoo">Tattoo OK (紋身友好)</span>' : ''}
+                                ${Array.isArray(onsen.bath_types) && onsen.bath_types.includes('private') ? '<span class="tag tag-private">Private Bath (私人浴池)</span>' : ''}
+                                ${Array.isArray(onsen.amenities) && onsen.amenities.includes('sauna') ? '<span class="tag tag-sauna">Sauna (桑拿)</span>' : ''}
+                                ${Array.isArray(onsen.amenities) && onsen.amenities.includes('restaurant') ? '<span class="tag tag-restaurant">Restaurant (餐廳)</span>' : ''}
+                                ${Array.isArray(onsen.amenities) && onsen.amenities.includes('24_hour') ? '<span class="tag tag-24hr">24-Hour (24小時)</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modal.querySelector('.modal-content').classList.remove('scale-95');
+                }, 10);
+            }
+
+            function hideModal() {
+                modal.classList.add('opacity-0');
+                modal.querySelector('.modal-content').classList.add('scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 250);
+            }
+
+            async function getRecommendation() {
+                const userInput = recommendationInput.value.trim();
+                if (!userInput) {
+                    recommendationText.textContent = "Please enter your preferences to get a recommendation.";
+                    recommendationOutput.classList.remove('hidden');
+                    return;
+                }
+
+                recommendationLoading.classList.remove('hidden');
+                recommendationOutput.classList.remove('hidden');
+                recommendationText.textContent = ''; // Clear previous recommendation
+
+                const prompt = `You are an expert onsen travel advisor. Based on the following list of onsen and the user's preferences, provide a personalized recommendation for an onsen or a short itinerary (1-2 days). Focus on matching the user's criteria with the onsen's unique selling points and overall sentiment. If no perfect match exists, suggest the closest options and explain why.
+
+Onsen Data (JSON):
+${JSON.stringify(onsenData, null, 2)}
+
+User's Preferences: "${userInput}"
+
+Please provide your recommendation in a friendly and helpful tone, highlighting why the suggested onsen(s) would be a good fit.`;
+
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        recommendationText.textContent = text;
+                    } else {
+                        recommendationText.textContent = "Sorry, I couldn't generate a recommendation. Please try again.";
+                    }
+                } catch (error) {
+                    console.error("Error calling Gemini API:", error);
+                    recommendationText.textContent = "An error occurred while fetching the recommendation. Please try again later.";
+                } finally {
+                    recommendationLoading.classList.add('hidden');
+                }
+            }
+
+            async function getEtiquetteAdvice() {
+                const userInput = etiquetteInput.value.trim();
+                if (!userInput) {
+                    etiquetteText.textContent = "Please ask a question about onsen etiquette.";
+                    etiquetteOutput.classList.remove('hidden');
+                    return;
+                }
+
+                etiquetteLoading.classList.remove('hidden');
+                etiquetteOutput.classList.remove('hidden');
+                etiquetteText.textContent = ''; // Clear previous advice
+
+                const prompt = `You are an expert onsen etiquette guide. Answer the following question about Japanese onsen etiquette concisely and clearly.
+
+User's Question: "${userInput}"`;
+
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        const text = result.candidates[0].content.parts[0].text;
+                        etiquetteText.textContent = text;
+                    } else {
+                        etiquetteText.textContent = "Sorry, I couldn't find an answer to that etiquette question. Please try rephrasing.";
+                    }
+                } catch (error) {
+                    console.error("Error calling Gemini API for etiquette:", error);
+                    etiquetteText.textContent = "An error occurred while fetching etiquette advice. Please try again later.";
+                } finally {
+                    etiquetteLoading.classList.add('hidden');
+                }
+            }
+
+            function showCompareModal() {
+                compareTable.querySelector('tbody').innerHTML = '';
+                compareTable.querySelector('thead tr').innerHTML = '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Feature</th>';
+
+                if (selectedOnsenForComparison.size < 2) {
+                    compareEmptyMessage.classList.remove('hidden');
+                    compareTable.classList.add('hidden');
+                    compareModal.classList.remove('hidden');
+                    setTimeout(() => {
+                        compareModal.classList.remove('opacity-0');
+                        compareModal.querySelector('.modal-content').classList.remove('scale-95');
+                    }, 10);
+                    return;
+                }
+
+                compareEmptyMessage.classList.add('hidden');
+                compareTable.classList.remove('hidden');
+
+                const selectedOnsen = Array.from(selectedOnsenForComparison).map(id => onsenData.find(o => o.id === id));
+
+                // Add onsen names to table header
+                selectedOnsen.forEach(onsen => {
+                    const th = document.createElement('th');
+                    th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider';
+                    th.textContent = `${onsen.name} (${onsen.name_zh})`;
+                    compareTable.querySelector('thead tr').appendChild(th);
+                });
+
+                const features = [
+                    { label: 'Region (地區)', key: 'region_zh' },
+                    { label: 'Price Range (價格範圍)', key: 'price' },
+                    { label: 'Day-Use Price (日歸價格)', key: 'price_day_use_gbp', prefix: '£' },
+                    { label: 'Overnight Price (住宿價格)', key: 'price_overnight_gbp_low', suffix: ' - £', key2: 'price_overnight_gbp_high' },
+                    { label: 'Hotel Star Rating (酒店星級)', key: 'hotel_star' },
+                    { label: 'Meals Included (包含餐點)', key: 'meal_plan_details' },
+                    { label: 'Room Types (房間類型)', key: 'room_types_and_packages' },
+                    { label: 'Fuji View (富士山景觀)', key: 'fuji_view', type: 'boolean' },
+                    { label: 'Tattoo Friendly (紋身友好)', key: 'tattoo_friendly', type: 'boolean' },
+                    { label: 'Google Rating (Google 評分)', key: 'google_rating', suffix: ' ⭐' },
+                    { label: 'Booking.com Rating (Booking.com 評分)', key: 'booking_rating', suffix: ' / 10' },
+                    { label: 'Nearest Station (最近車站)', key: 'nearest_station' },
+                    { label: 'Time from Tokyo (距東京市中心時間)', key: 'time_from_tokyo' },
+                    { label: 'Unique Selling Point (獨特賣點)', key: 'usp' },
+                    { label: 'Sentiment (整體評價)', key: 'sentiment' },
+                    { label: 'Bath Types (浴池類型)', key: 'bath_types', type: 'array' },
+                    { label: 'Amenities (設施)', key: 'amenities', type: 'array' },
+                ];
+
+                features.forEach(feature => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    const featureCell = document.createElement('td');
+                    featureCell.className = 'px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900';
+                    featureCell.textContent = feature.label;
+                    row.appendChild(featureCell);
+
+                    selectedOnsen.forEach(onsen => {
+                        const valueCell = document.createElement('td');
+                        valueCell.className = 'px-6 py-4 whitespace-normal text-sm text-gray-500';
+                        let displayValue = onsen[feature.key];
+
+                        if (feature.type === 'boolean') {
+                            displayValue = displayValue ? 'Yes (是)' : 'No (否)';
+                        } else if (feature.type === 'array') {
+                            displayValue = Array.isArray(displayValue) && displayValue.length > 0 ? displayValue.map(item => {
+                                // Convert internal keys to display names
+                                const displayMap = {
+                                    'private': 'Private (私人)', 'open-air': 'Open-Air (露天)', 'indoor': 'Indoor (室內)',
+                                    'carbonated': 'Carbonated (碳酸)', 'sulfur': 'Sulfur (硫磺)', 'alkaline': 'Alkaline (鹼性)',
+                                    'black_water': 'Black Water (黑湯)', 'chloride': 'Chloride (氯化物)', 'sauna': 'Sauna (桑拿)', 'spa_services': 'Spa Services (水療服務)',
+                                    'restaurant': 'Restaurant (餐廳)', 'gift_shop': 'Gift Shop (禮品店)', 'kids_area': 'Kids\' Area (兒童區)',
+                                    'wheelchair_accessible': 'Wheelchair Accessible (輪椅通道)', '24_hour': '24-Hour (24小時)', 'pool': 'Pool (游泳池)', 'bar': 'Bar (酒吧)', 'laundry': 'Laundry (洗衣)', 'shared_kitchen': 'Shared Kitchen (共用廚房)', 'unique': 'Unique (獨特)'
+                                };
+                                return displayMap[item] || item;
+                            }).join(', ') : 'N/A';
+                        } else if (feature.key === 'price_overnight_gbp_low' && onsen.price_overnight_gbp_low !== "N/A") {
+                            displayValue = `£${onsen.price_overnight_gbp_low}`;
+                            if (onsen.price_overnight_gbp_high !== "N/A") {
+                                displayValue += ` - £${onsen.price_overnight_gbp_high}`;
+                            }
+                        } else if (feature.key === 'price_day_use_gbp' && onsen.price_day_use_gbp !== "N/A") {
+                            displayValue = `£${onsen.price_day_use_gbp}`;
+                        } else {
+                            displayValue = displayValue || 'N/A';
+                        }
+
+                        valueCell.textContent = displayValue;
+                        row.appendChild(valueCell);
+                    });
+                    compareTable.querySelector('tbody').appendChild(row);
+                });
+
+                compareModal.classList.remove('hidden');
+                setTimeout(() => {
+                    compareModal.classList.remove('opacity-0');
+                    compareModal.querySelector('.modal-content').classList.remove('scale-95');
+                }, 10);
+            }
+
+            function hideCompareModal() {
+                compareModal.classList.add('opacity-0');
+                compareModal.querySelector('.modal-content').classList.add('scale-95');
+                setTimeout(() => compareModal.classList.add('hidden'), 250);
+            }
+
+            function showFavoritesModal() {
+                favoritesBody.innerHTML = '';
+                if (favoriteOnsenIds.size === 0) {
+                    favoritesEmptyMessage.classList.remove('hidden');
+                } else {
+                    favoritesEmptyMessage.classList.add('hidden');
+                    Array.from(favoriteOnsenIds).forEach(id => {
+                        const onsen = onsenData.find(o => o.id === id);
+                        if (onsen) {
+                            const card = createOnsenCard(onsen); // Reuse card creation logic
+                            // Remove compare checkbox and favorite star from favorites modal cards
+                            const checkbox = card.querySelector('.compare-checkbox');
+                            if (checkbox) checkbox.remove();
+                            const star = card.querySelector('.star-icon');
+                            if (star) star.remove();
+                            favoritesBody.appendChild(card);
+                        }
+                    });
+                }
+                favoritesModal.classList.remove('hidden');
+                setTimeout(() => {
+                    favoritesModal.classList.remove('opacity-0');
+                    favoritesModal.querySelector('.modal-content').classList.remove('scale-95');
+                }, 10);
+            }
+
+            function hideFavoritesModal() {
+                favoritesModal.classList.add('opacity-0');
+                favoritesModal.querySelector('.modal-content').classList.add('scale-95');
+                setTimeout(() => favoritesModal.classList.add('hidden'), 250);
+            }
+
+            function renderMap() {
+                onsenMap.innerHTML = `
+                    <div class="absolute top-0 left-0 w-1/2 h-1/2 bg-blue-50 opacity-50 flex items-center justify-center text-xl font-bold text-blue-800">Tokyo (東京)</div>
+                    <div class="absolute top-0 right-0 w-1/2 h-1/2 bg-green-50 opacity-50 flex items-center justify-center text-xl font-bold text-green-800">Other Kanto (其他關東)</div>
+                    <div class="absolute bottom-0 left-0 w-1/2 h-1/2 bg-red-50 opacity-50 flex items-center justify-center text-xl font-bold text-red-800">Hakone (箱根)</div>
+                    <div class="absolute bottom-0 right-0 w-1/2 h-1/2 bg-yellow-50 opacity-50 flex items-center justify-center text-xl font-bold text-yellow-800">Mt. Fuji & Izu (富士山與伊豆)</div>
+                `; // Re-add region overlays
+                legendList.innerHTML = '';
+
+                onsenData.forEach(onsen => {
+                    if (onsen.map_coords) {
+                        const marker = document.createElement('div');
+                        marker.className = `absolute w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold cursor-pointer shadow-md hover:scale-110 transition-transform`;
+                        marker.style.left = `${onsen.map_coords.x}%`;
+                        marker.style.top = `${onsen.map_coords.y}%`;
+                        marker.style.transform = 'translate(-50%, -50%)'; // Center the marker
+                        marker.textContent = onsen.id;
+                        marker.title = `${onsen.name} (${onsen.name_zh})`;
+                        marker.addEventListener('click', () => showModal(onsen.id));
+                        onsenMap.appendChild(marker);
+
+                        const legendItem = document.createElement('li');
+                        legendItem.innerHTML = `<strong>${onsen.id}.</strong> ${onsen.name} (${onsen.name_zh})`;
+                        legendList.appendChild(legendItem);
+                    }
+                });
+            }
+
+            function setupCharts() {
+                const regionCtx = document.getElementById('regionChart').getContext('2d');
+                const priceCtx = document.getElementById('priceChart').getContext('2d');
+
+                const regionCounts = onsenData.reduce((acc, onsen) => {
+                    acc[onsen.region] = (acc[onsen.region] || 0) + 1;
+                    return acc;
+                }, {});
+
+                const priceCounts = onsenData.reduce((acc, onsen) => {
+                    acc[onsen.price] = (acc[onsen.price] || 0) + 1;
+                    return acc;
+                }, {});
+                
+                const priceLabels = {
+                    'budget': 'Budget (實惠)',
+                    'mid-range': 'Mid-Range (標準)',
+                    'luxury': 'Luxury (高級)'
+                };
+
+                regionChart = new Chart(regionCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(regionCounts),
+                        datasets: [{
+                            data: Object.values(regionCounts),
+                            backgroundColor: ['#60A5FA', '#FBBF24', '#34D399', '#F87171', '#818CF8'],
+                            borderColor: '#F8F7F4',
+                            borderWidth: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += context.parsed + ' facilities';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                priceChart = new Chart(priceCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(priceCounts).map(p => priceLabels[p]),
+                        datasets: [{
+                            label: 'Number of Onsen',
+                            data: Object.values(priceCounts),
+                            backgroundColor: ['#818CF8', '#F59E0B', '#EF4444'],
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: {
+                                    display: false
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Event Listeners
+            regionFilter.addEventListener('change', applyFiltersAndSort);
+            priceFilter.addEventListener('change', applyFiltersAndSort);
+            fujiViewFilter.addEventListener('change', applyFiltersAndSort);
+            tattooFilter.addEventListener('change', applyFiltersAndSort);
+            bathTypeFilter.addEventListener('change', applyFiltersAndSort);
+            amenityFilter.addEventListener('change', applyFiltersAndSort);
+            sortBy.addEventListener('change', applyFiltersAndSort);
+            resetFiltersBtn.addEventListener('click', resetFilters);
+
+            closeModalBtn.addEventListener('click', hideModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hideModal();
+                }
+            });
+
+            getRecommendationBtn.addEventListener('click', getRecommendation);
+            getEtiquetteBtn.addEventListener('click', getEtiquetteAdvice);
+
+            compareSelectedBtn.addEventListener('click', showCompareModal);
+            closeCompareModalBtn.addEventListener('click', hideCompareModal);
+            compareModal.addEventListener('click', (e) => {
+                if (e.target === compareModal) {
+                    hideCompareModal();
+                }
+            });
+
+            viewFavoritesBtn.addEventListener('click', showFavoritesModal);
+            closeFavoritesModalBtn.addEventListener('click', hideFavoritesModal);
+            favoritesModal.addEventListener('click', (e) => {
+                if (e.target === favoritesModal) {
+                    hideFavoritesModal();
+                }
+            });
+
+            // Initial render
+            applyFiltersAndSort();
+            setupCharts();
+            updateFavoriteCount();
+            updateCompareCount();
+            renderMap(); // Render the map on initial load
+        });
+    </script>
+</body>
+</html>
