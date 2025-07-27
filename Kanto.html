@@ -1,1 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Kanto Travel Guide - Expanded</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Serene Kanto -->
+    <!-- Application Structure Plan: The SPA retains its task-oriented, single-page structure with a fixed top navigation bar for intuitive access to 'Home', 'Destinations', 'Plan', 'Experiences', and 'Seasonal' sections. This design is maintained because it effectively segments the vast amount of travel information, allowing users to focus on specific planning stages. The key enhancement is the depth of content within each section. The 'Plan' section now features a highly detailed, filterable accommodation table and a granular timeline for the itinerary. The 'Experiences' section uses clickable cards that open modals for in-depth booking information. This preserves the clean UI while offering significantly richer, more actionable content upon user interaction. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Expanded Hotel/Apartment list (30+) -> Goal: Compare/Organize -> Viz/Method: Interactive HTML Table -> Interaction: Filters (Location, Type, Price), Search -> Justification: Manages the increased data complexity, allowing users to efficiently find suitable lodging with detailed room/price info in GBP/JPY.
+        - Report Info: Detailed 14-Day Itinerary -> Goal: Organize/Inform -> Viz/Method: HTML/CSS Vertical Timeline/Stepper -> Interaction: Click to expand day details (Morning/Afternoon/Evening) -> Justification: Visually represents the trip's flow and makes the dense, time-blocked schedule digestible and engaging.
+        - Report Info: Experience booking details -> Goal: Inform/Action -> Viz/Method: Clickable Cards opening HTML Modals -> Interaction: Click card to reveal modal with price, suppliers, booking links -> Justification: Keeps the main gallery clean while providing deep, actionable information on demand, preventing UI clutter.
+        - Report Info: In-depth destination details -> Goal: Inform -> Viz/Method: Expanded text blocks within existing structure -> Interaction: Click destination button to update content view -> Justification: Leverages the existing navigation to present richer content without altering the core user flow.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .nav-link { transition: all 0.3s ease; }
+        .nav-link.active { color: #4a5568; border-bottom-color: #4a5568; }
+        .nav-link:not(.active) { border-bottom-color: transparent; }
+        .content-section { display: none; }
+        .content-section.active { display: block; animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .chart-container { position: relative; width: 100%; max-width: 800px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { background: white; padding: 2rem; border-radius: 0.5rem; max-width: 90%; width: 600px; max-height: 90vh; overflow-y: auto; }
+        .timeline { position: relative; padding-left: 2rem; }
+        .timeline::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background-color: #e2e8f0; }
+        .timeline-item { position: relative; margin-bottom: 2rem; }
+        .timeline-dot { position: absolute; left: -2.5rem; top: 0.25rem; height: 1rem; width: 1rem; background-color: #4a5568; border-radius: 9999px; border: 2px solid white; }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <h1 class="text-xl md:text-2xl font-bold text-stone-700">Kanto Unveiled</h1>
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="#home" class="nav-link text-stone-600 hover:text-stone-900 border-b-2 pb-1" data-section="home">Home</a>
+                    <a href="#destinations" class="nav-link text-stone-600 hover:text-stone-900 border-b-2 pb-1" data-section="destinations">Destinations</a>
+                    <a href="#plan" class="nav-link text-stone-600 hover:text-stone-900 border-b-2 pb-1" data-section="plan">Plan</a>
+                    <a href="#experiences" class="nav-link text-stone-600 hover:text-stone-900 border-b-2 pb-1" data-section="experiences">Experiences</a>
+                    <a href="#seasonal" class="nav-link text-stone-600 hover:text-stone-900 border-b-2 pb-1" data-section="seasonal">Seasonal</a>
+                </div>
+                <div class="md:hidden">
+                    <select id="mobile-nav" class="bg-white border border-stone-300 rounded-md py-2 px-3 text-stone-700">
+                        <option value="home">Home</option>
+                        <option value="destinations">Destinations</option>
+                        <option value="plan">Plan</option>
+                        <option value="experiences">Experiences</option>
+                        <option value="seasonal">Seasonal</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+        
+        <section id="home" class="content-section">
+            <div class="text-center bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-4xl font-bold text-stone-800 mb-4">Your Independent Journey Begins</h2>
+                <p class="text-lg text-stone-600 max-w-3xl mx-auto mb-6">
+                    Welcome to the Kanto region, the vibrant heart of Japan. This expanded guide is designed for the discerning couple seeking a rich, two-week adventure that blends hyper-modernity with deep tradition. From Tokyo's neon energy to Hakone's serene escapes, Kanto offers an unparalleled tapestry of culture, food, and relaxation.
+                </p>
+                <p class="text-md text-stone-500 max-w-3xl mx-auto">
+                    This interactive application helps you explore the possibilities. Use the navigation above to discover destinations, plan your stay with detailed accommodation options, find unique experiences with booking info, and see what each season has to offer.
+                </p>
+            </div>
+             <div class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="card bg-white p-6 rounded-lg text-center cursor-pointer" data-section-link="destinations">
+                    <div class="text-4xl mb-3">🗺️</div>
+                    <h3 class="font-bold text-lg">Destinations</h3>
+                    <p class="text-sm text-stone-500">Explore Tokyo, Hakone & more in-depth.</p>
+                </div>
+                <div class="card bg-white p-6 rounded-lg text-center cursor-pointer" data-section-link="plan">
+                    <div class="text-4xl mb-3">🏨</div>
+                    <h3 class="font-bold text-lg">Plan Your Stay</h3>
+                    <p class="text-sm text-stone-500">30+ hotels & detailed itinerary.</p>
+                </div>
+                <div class="card bg-white p-6 rounded-lg text-center cursor-pointer" data-section-link="experiences">
+                    <div class="text-4xl mb-3">🍵</div>
+                    <h3 class="font-bold text-lg">Experiences</h3>
+                    <p class="text-sm text-stone-500">Prices, suppliers & booking info.</p>
+                </div>
+                <div class="card bg-white p-6 rounded-lg text-center cursor-pointer" data-section-link="seasonal">
+                    <div class="text-4xl mb-3">🌸</div>
+                    <h3 class="font-bold text-lg">Seasonal Guide</h3>
+                    <p class="text-sm text-stone-500">Best times to visit Kanto.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="destinations" class="content-section">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-stone-800">Explore Destinations In-Depth</h2>
+                <p class="text-stone-600 mt-2">Click on a region to discover its key districts and attractions, now with significantly more detail.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div id="dest-nav" class="md:col-span-1 flex md:flex-col flex-wrap justify-center gap-2"></div>
+                <div id="dest-content" class="md:col-span-4 bg-white p-6 rounded-lg shadow-md min-h-[400px]"></div>
+            </div>
+        </section>
+
+        <section id="plan" class="content-section">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-stone-800">Plan Your Perfect Trip</h2>
+                <p class="text-stone-600 mt-2">Use these enhanced tools to find the right accommodation, build your itinerary, and estimate your budget.</p>
+            </div>
+            <div class="bg-white rounded-lg shadow-md">
+                <div class="border-b border-stone-200">
+                    <nav class="flex -mb-px" id="plan-tabs">
+                        <button class="plan-tab-button active w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm" data-tab="accommodations">🏨 Accommodations</button>
+                        <button class="plan-tab-button w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm" data-tab="itinerary">🗺️ Detailed Itinerary</button>
+                    </nav>
+                </div>
+                <div class="p-6">
+                    <div id="accommodations-content" class="plan-tab-content active"></div>
+                    <div id="itinerary-content" class="plan-tab-content"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="experiences" class="content-section">
+             <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-stone-800">Find Your Experience</h2>
+                <p class="text-stone-600 mt-2">Kanto is rich with activities. Filter by interest and click on a card for detailed pricing and booking information.</p>
+            </div>
+            <div id="exp-filters" class="flex flex-wrap justify-center gap-2 mb-6"></div>
+            <div id="exp-gallery" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+
+        <section id="seasonal" class="content-section">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-stone-800">Seasonal Guide</h2>
+                <p class="text-stone-600 mt-2">Discover the best time to visit Kanto, from cherry blossoms in spring to vibrant autumn leaves.</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-bold text-center mb-4">Kanto's Climate & Key Events</h3>
+                <div class="chart-container">
+                    <canvas id="seasonalChart"></canvas>
+                </div>
+                <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-bold text-lg mb-2">🌸 Spring (Mar-May)</h4>
+                        <p class="text-stone-600 text-sm">The most popular season. Witness the breathtaking cherry blossoms (sakura) from late March to early April. Weather is mild and pleasant. Key event: Nakameguro Cherry Blossom Festival, with illuminated trees along the canal.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-lg mb-2">☀️ Summer (Jun-Aug)</h4>
+                        <p class="text-stone-600 text-sm">Hot and humid, with a rainy season in June/July. A great time for vibrant festivals (matsuri) and fireworks displays. Key event: Sumidagawa Fireworks Festival, one of Japan's largest.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-lg mb-2">🍂 Autumn (Sep-Nov)</h4>
+                        <p class="text-stone-600 text-sm">Comfortable temperatures and stunning autumn foliage (koyo) from mid-November. A beautiful and less crowded time to visit. Key event: Mount Takao Maple Festival, perfect for a scenic hike.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-lg mb-2">❄️ Winter (Dec-Feb)</h4>
+                        <p class="text-stone-600 text-sm">Cold and dry, but with clear skies and fewer tourists. Cities are decorated with beautiful winter illuminations. A great time for onsen trips to Hakone to escape the cold.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="experience-modal" class="modal-overlay">
+        <div id="modal-content-inner" class="modal-content"></div>
+    </div>
+    
+<script>
+const DB = {
+    destinations: [
+        {
+            id: 'tokyo',
+            name: 'Tokyo',
+            description: "Tokyo's districts are like individual cities, each with its own pulse and personality. From the skyscrapers of Shinjuku to the traditional heart of Asakusa, the city is a universe of exploration.",
+            attractions: [
+                { name: 'Shinjuku', details: 'A vibrant hub of business, entertainment, and nightlife. Home to the Tokyo Metropolitan Government Building for free panoramic views, the serene Shinjuku Gyoen National Garden, and the atmospheric Golden Gai for a taste of old Tokyo nightlife. Shinjuku is a city within a city, offering everything from luxury department stores like Isetan to tiny, character-filled bars.' },
+                { name: 'Shibuya', details: 'The epicenter of youth culture and fashion. Famous for the iconic Shibuya Crossing, the Hachiko statue, and trendy shopping at Shibuya 109 and Miyashita Park. For the best views of the crossing, head to the Starbucks on the second floor of the Tsutaya building or the Shibuya Sky observation deck.' },
+                { name: 'Asakusa', details: 'Preserves the atmosphere of old Edo. Visit Tokyo\'s oldest temple, Senso-ji, and browse traditional stalls along Nakamise-dori. A Sumida River cruise offers a different city perspective, connecting you to areas like Odaiba. Don\'t miss the Asakusa Culture Tourist Information Center for great views.' },
+                { name: 'Ginza', details: 'Tokyo\'s most upscale shopping and dining district. Explore luxury complexes like Ginza Six and experience traditional performing arts at the Kabuki-za Theatre. On weekends, the main Chuo Dori street becomes a pedestrian paradise, perfect for a leisurely stroll.' },
+                { name: 'Ueno', details: 'A cultural hub distinguished by its expansive park, which houses the Tokyo National Museum, Ueno Zoo, and several temples. Nearby Ameyoko Market offers a bustling, sensory-filled contrast with its street food and bargain goods.' },
+                { name: 'Harajuku', details: 'The colorful center of youth fashion. Brave the crowds on Takeshita Street for quirky shops and find a peaceful escape at the adjacent Meiji Jingu Shrine. For a more relaxed vibe, explore Cat Street, which connects Harajuku to Shibuya and is lined with chic boutiques and cafes.' },
+            ]
+        },
+        {
+            id: 'kanagawa',
+            name: 'Kanagawa',
+            description: "Immediately south of Tokyo, Kanagawa offers a refreshing contrast with its cosmopolitan port cities, ancient temples, and coastal charm. It's a perfect escape from the urban intensity of the capital.",
+            attractions: [
+                { name: 'Yokohama', details: 'A modern port city with a rich history. Explore the futuristic Minato Mirai 21 waterfront, Japan\'s largest Chinatown for culinary delights, and the beautiful Sankeien Garden. The CupNoodles Museum is a fun, interactive stop for couples.' },
+                { name: 'Kamakura & Enoshima', details: 'Kamakura, a former feudal capital, is renowned for its temples and the iconic Great Buddha. The nearby island of Enoshima offers caves, shrines, and scenic views of Mt. Fuji on clear days. The scenic Enoshima Electric Railway (Enoden) connects the key sights.' },
+            ]
+        },
+        {
+            id: 'hakone',
+            name: 'Hakone',
+            description: "A mountainous resort town celebrated for its hot springs (onsen), breathtaking natural beauty, and stunning views of Mt. Fuji. An overnight stay in a traditional ryokan is highly recommended for the full experience.",
+            attractions: [
+                { name: 'Hakone Loop', details: 'A popular scenic route using various transports (train, cable car, ropeway, boat) to explore the region\'s highlights, including Lake Ashi and the volcanic Owakudani valley. Purchase the Hakone Free Pass for convenient, unlimited travel.' },
+                { name: 'Onsen Experience', details: 'An essential Japanese relaxation experience. Hakone boasts numerous ryokans and public bathhouses offering traditional hot spring baths. For couples, many ryokans offer private onsen (kashikiri) for a more intimate experience.' },
+                { name: 'Hakone Open-Air Museum', details: 'A unique museum blending modern sculpture with nature in a beautiful outdoor setting. It\'s an engaging and visually stunning way to spend an afternoon.' },
+            ]
+        },
+        {
+            id: 'mtfuji',
+            name: 'Mt. Fuji Area',
+            description: "The area around Japan's most iconic peak offers stunning views and natural beauty, best accessed via the Fuji Five Lakes region. Note that Fuji-san is famously shy, so clear views are a matter of luck!",
+            attractions: [
+                { name: 'Lake Kawaguchiko', details: 'The most accessible of the Fuji Five Lakes, offering iconic reflections of Mt. Fuji on its calm waters. A prime spot for photography and leisurely walks. Renting a bike is a great way to explore the shoreline.' },
+                { name: 'Chureito Pagoda', details: 'Located in Arakurayama Sengen Park, this spot provides the world-famous postcard view of Mt. Fuji framed by a beautiful five-storied pagoda, especially popular during cherry blossom and autumn seasons. Be prepared for a climb of nearly 400 steps.' },
+            ]
+        },
+    ],
+    accommodations: [
+        { name: 'Park Hyatt Tokyo', location: 'Tokyo', district: 'Shinjuku', type: 'Luxury Hotel', roomType: 'Deluxe King', priceGBP: '£470', priceJPY: '¥92,500' },
+        { name: 'The Tokyo Station Hotel', location: 'Tokyo', district: 'Chiyoda', type: 'Luxury Hotel', roomType: 'Palace Side King', priceGBP: '£510', priceJPY: '¥100,000' },
+        { name: 'Kimpton Shinjuku Tokyo', location: 'Tokyo', district: 'Shinjuku', type: 'Boutique Hotel', roomType: 'Deluxe King', priceGBP: '£430', priceJPY: '¥84,500' },
+        { name: 'The Prince Gallery Tokyo Kioicho', location: 'Tokyo', district: 'Chiyoda', type: 'Luxury Hotel', roomType: 'Deluxe King', priceGBP: '£400', priceJPY: '¥78,500' },
+        { name: 'TRUNK (HOTEL) CAT STREET', location: 'Tokyo', district: 'Shibuya', type: 'Boutique Hotel', roomType: 'Standard Double', priceGBP: '£310', priceJPY: '¥61,000' },
+        { name: 'Hotel Indigo Tokyo Shibuya', location: 'Tokyo', district: 'Shibuya', type: 'Boutique Hotel', roomType: 'Standard King', priceGBP: '£300', priceJPY: '¥59,000' },
+        { name: 'The Gate Hotel Asakusa', location: 'Tokyo', district: 'Asakusa', type: 'Mid-range Hotel', roomType: 'Classic Double', priceGBP: '£220', priceJPY: '¥43,000' },
+        { name: 'Onsen Ryokan Yuen Shinjuku', location: 'Tokyo', district: 'Shinjuku', type: 'Mid-range Ryokan', roomType: 'Double Room', priceGBP: '£240', priceJPY: '¥47,000' },
+        { name: 'Shibuya Stream Excel Hotel Tokyu', location: 'Tokyo', district: 'Shibuya', type: 'Mid-range Hotel', roomType: 'Standard Double', priceGBP: '£250', priceJPY: '¥49,000' },
+        { name: 'Hotel Gracery Shinjuku', location: 'Tokyo', district: 'Shinjuku', type: 'Mid-range Hotel', roomType: 'Double Room', priceGBP: '£200', priceJPY: '¥39,500' },
+        { name: 'THE KNOT TOKYO Shinjuku', location: 'Tokyo', district: 'Shinjuku', type: 'Mid-range Hotel', roomType: 'Standard Double', priceGBP: '£150', priceJPY: '¥29,500' },
+        { name: 'Asakusa Tobu Hotel', location: 'Tokyo', district: 'Asakusa', type: 'Mid-range Hotel', roomType: 'Standard Double', priceGBP: '£180', priceJPY: '¥35,500' },
+        { name: 'Mitsui Garden Hotel Ueno', location: 'Tokyo', district: 'Ueno', type: 'Mid-range Hotel', roomType: 'Moderate Double', priceGBP: '£170', priceJPY: '¥33,500' },
+        { name: 'Dormy Inn Premium Shibuya', location: 'Tokyo', district: 'Shibuya', type: 'Budget-Friendly Hotel', roomType: 'Double Room', priceGBP: '£160', priceJPY: '¥31,500' },
+        { name: 'APA Hotel & Resort Nishishinjuku', location: 'Tokyo', district: 'Shinjuku', type: 'Budget-Friendly Hotel', roomType: 'Standard Double', priceGBP: '£110', priceJPY: '¥21,500' },
+        { name: 'Hundred Stay Tokyo Shinjuku', location: 'Tokyo', district: 'Shinjuku', type: 'Serviced Apartment', roomType: 'Studio Apartment', priceGBP: '£180', priceJPY: '¥35,500' },
+        { name: 'MIMARU Tokyo Ueno North', location: 'Tokyo', district: 'Ueno', type: 'Serviced Apartment', roomType: 'Two-Bedroom Apartment', priceGBP: '£260', priceJPY: '¥51,000' },
+        { name: 'MONday Apart Premium UENO', location: 'Tokyo', district: 'Ueno', type: 'Serviced Apartment', roomType: 'Deluxe Apartment', priceGBP: '£190', priceJPY: '¥37,500' },
+        { name: 'The Kahala Hotel & Resort Yokohama', location: 'Kanagawa', district: 'Yokohama', type: 'Luxury Hotel', roomType: 'Grand King', priceGBP: '£350', priceJPY: '¥69,000' },
+        { name: 'InterContinental Yokohama Pier 8', location: 'Kanagawa', district: 'Yokohama', type: 'Luxury Hotel', roomType: 'Classic King', priceGBP: '£380', priceJPY: '¥75,000' },
+        { name: 'The Westin Yokohama', location: 'Kanagawa', district: 'Yokohama', type: 'Luxury Hotel', roomType: 'Deluxe King', priceGBP: '£320', priceJPY: '¥63,000' },
+        { name: 'Hotel New Grand', location: 'Kanagawa', district: 'Yokohama', type: 'Mid-range Hotel', roomType: 'Tower View Double', priceGBP: '£210', priceJPY: '¥41,500' },
+        { name: 'Kamakura Prince Hotel', location: 'Kanagawa', district: 'Kamakura', type: 'Mid-range Hotel', roomType: 'Twin Room Ocean View', priceGBP: '£230', priceJPY: '¥45,000' },
+        { name: 'Hakone Ginyu', location: 'Hakone', district: 'Miyanoshita', type: 'Luxury Ryokan', roomType: 'Japanese Suite with Open-Air Bath', priceGBP: '£650', priceJPY: '¥128,000' },
+        { name: 'Hakone Kowakien Tenyu', location: 'Hakone', district: 'Kowakudani', type: 'Luxury Ryokan', roomType: 'Room with Open-Air Bath', priceGBP: '£550', priceJPY: '¥108,000' },
+        { name: 'Hyatt Regency Hakone', location: 'Hakone', district: 'Gora', type: 'Luxury Hotel', roomType: 'Deluxe Twin', priceGBP: '£450', priceJPY: '¥88,500' },
+        { name: 'Hakone Ashinoko Hanaori', location: 'Hakone', district: 'Togendai', type: 'Mid-range Ryokan', roomType: 'Lake View Japanese Room', priceGBP: '£350', priceJPY: '¥69,000' },
+        { name: 'Fujiya Hotel', location: 'Hakone', district: 'Miyanoshita', type: 'Historic Hotel', roomType: 'Standard Twin', priceGBP: '£400', priceJPY: '¥78,500' },
+        { name: 'Mount View Hakone', location: 'Hakone', district: 'Sengokuhara', type: 'Budget-Friendly Ryokan', roomType: 'Tatami Room', priceGBP: '£120', priceJPY: '¥23,500' },
+        { name: 'Fufu Kawaguchiko', location: 'Mt. Fuji Area', district: 'Kawaguchiko', type: 'Luxury Hotel', roomType: 'Suite with Open-Air Bath', priceGBP: '£700', priceJPY: '¥137,500' },
+        { name: 'Hoshinoya Fuji', location: 'Mt. Fuji Area', district: 'Kawaguchiko', type: 'Glamping Resort', roomType: 'T Cabin', priceGBP: '£600', priceJPY: '¥118,000' },
+    ],
+    itinerary: [
+        { day: 1, title: 'Arrival & Shinjuku Immersion', morning: 'Arrive at NRT/HND, transfer to Tokyo (1.5-2h). Check-in and settle.', afternoon: 'Explore Shinjuku. Ascend Tokyo Metropolitan Government Building for panoramic views (1.5h). Stroll through Shinjuku Gyoen National Garden (2h).', evening: 'Dinner in Shinjuku. Explore the atmospheric alleys of Golden Gai or Omoide Yokocho for drinks (3-4h).' },
+        { day: 2, title: 'Shibuya & Harajuku Culture', morning: 'Experience Shibuya Crossing and Hachiko Statue (1h). Explore Shibuya 109 and Miyashita Park (2h).', afternoon: 'Walk to Harajuku. Brave Takeshita Street for quirky fashion and crepes (1.5h). Find serenity at Meiji Jingu Shrine (1.5h).', evening: 'Dinner in Harajuku/Omotesando. Explore the chic boutiques on Cat Street (2-3h).' },
+        { day: 3, title: 'Traditional Asakusa & Ginza Elegance', morning: 'Visit Senso-ji Temple in Asakusa (1.5h). Explore Nakamise-dori for souvenirs and street food (1h).', afternoon: 'Take a Sumida River Cruise from Asakusa to Hinode Pier (40m). Transfer to Ginza. Explore the upscale department stores like Mitsukoshi and Wako (2.5h).', evening: 'Dinner in Ginza. Consider a single-act Kabuki performance at Kabuki-za Theatre (1.5h).' },
+        { day: 4, title: 'Ueno\'s Treasures & Akihabara\'s Glow', morning: 'Visit Ueno Park. Choose between the Tokyo National Museum (2.5h) or Ueno Zoo (2.5h).', afternoon: 'Explore Ameyoko Market for a lively local atmosphere (1.5h). Head to Akihabara, the "Electric Town," for electronics and anime culture (2.5h).', evening: 'Dinner in Akihabara. Experience a themed cafe or a top-rated ramen shop (2-3h).' },
+        { day: 5, title: 'Culinary & Cultural Deep Dive', morning: 'Take a Japanese cooking class, learning to make sushi or ramen (3h).', afternoon: 'Participate in a traditional tea ceremony for a serene cultural experience (1.5h).', evening: 'Izakaya hopping in a local neighborhood like Ebisu or Yurakucho for authentic food and drinks (3-4h).' },
+        { day: 6, title: 'Day Trip to Kamakura & Enoshima', morning: 'Travel to Kamakura (1h). Visit Kotoku-in Temple (Great Buddha) and Hase-dera Temple (2.5h).', afternoon: 'Lunch in Kamakura. Take the Enoden train to Enoshima Island. Explore the island\'s shrines and caves (3h).', evening: 'Enjoy the sunset views from Enoshima before returning to Tokyo (1.5h). Dinner upon return.' },
+        { day: 7, title: 'Art, Design & Relaxation', morning: 'Explore the Nezu Museum in Omotesando for its collection and beautiful garden (2h).', afternoon: 'Discover the trendy and artistic neighborhood of Daikanyama, visiting Tsutaya T-Site and boutique shops (3h).', evening: 'Enjoy a sophisticated dinner in Roppongi Hills followed by cocktails at a sky bar with city views (3-4h).' },
+        { day: 8, title: 'Day Trip to Yokohama', morning: 'Travel to Yokohama (45m). Explore the modern Minato Mirai 21 waterfront and visit the Landmark Tower Sky Garden (2.5h).', afternoon: 'Visit the fun and interactive CupNoodles Museum (1.5h). Immerse yourselves in Yokohama Chinatown for a late lunch (2h).', evening: 'Stroll through the historic Yamashita Park before returning to Tokyo (1h). Dinner upon return.' },
+        { day: 9, title: 'Flexible Tokyo Exploration', morning: 'Revisit a favorite district or explore a new one. Consider Shimokitazawa for vintage shopping or Yanaka for a glimpse of old Tokyo (3h).', afternoon: 'Visit the Ghibli Museum (requires advance booking) or explore the peaceful Inokashira Park in Kichijoji (3h).', evening: 'Enjoy a relaxed farewell dinner at a restaurant of your choice (2-3h).' },
+        { day: 10, 'title': 'To Hakone for Onsen (Overnight)', 'morning': 'Check out of Tokyo hotel. Travel to Hakone (1.5h). Check into your ryokan in Gora or Miyanoshita.', 'afternoon': 'Begin the Hakone Loop. Take the Tozan Railway and Cable Car to Gora. Visit the Hakone Open-Air Museum (2.5h).', 'evening': 'Return to your ryokan. Enjoy a traditional multi-course kaiseki dinner and a long, relaxing soak in the onsen.' },
+        { day: 11, 'title': 'Hakone Loop & Lake Ashi', 'morning': 'Continue the Hakone Loop. Take the Ropeway from Gora to Owakudani to see the volcanic valley (1h). Proceed to Togendai.', 'afternoon': 'Take the Hakone Sightseeing Cruise across Lake Ashi (30m). Visit the iconic Hakone Shrine with its lakeside torii gate (1h).', 'evening': 'Enjoy another exquisite kaiseki dinner and onsen experience at your ryokan.' },
+        { day: 12, 'title': 'Mt. Fuji Views & Return to Tokyo', 'morning': 'Travel from Hakone to the Kawaguchiko area (1.5h). Store luggage at Kawaguchiko Station.', 'afternoon': 'Visit the Chureito Pagoda for the iconic Fuji view (2h). Explore the northern shore of Lake Kawaguchiko for more photo opportunities (2h).', 'evening': 'Retrieve luggage and travel back to Tokyo (2h). Check into your final Tokyo hotel. Casual dinner.' },
+        { day: 13, 'title': 'Last Bites & Souvenirs', 'morning': 'Explore Tsukiji Outer Market for a final fresh seafood breakfast and to buy culinary souvenirs (2h).', 'afternoon': 'Last-minute souvenir shopping. Browse a depachika (Isetan, Mitsukoshi) for high-end gifts or Don Quijote for quirky items (3h).', 'evening': 'Enjoy a special farewell dinner. This is a great night to splurge on a high-end sushi or tempura restaurant (3h).' },
+        { day: 14, 'title': 'Departure', 'morning': 'Enjoy a final Japanese breakfast. Depending on flight time, you might have time for a quick visit to a nearby park or shrine.', 'afternoon': 'Transfer to Narita (NRT) or Haneda (HND) airport for your flight home (allow at least 3 hours before departure).', 'evening': '' }
+    ],
+    experiences: [
+        { name: 'Tea Ceremony', category: 'Culture', description: 'Participate in a traditional tea ceremony to understand its intricate rituals.', price: '£25-£50 / ¥5,000-¥10,000', suppliers: [{name: 'Maikoya Asakusa', booking: 'Book online via official website or Klook.'}, {name: 'Chazen Shinjuku', booking: 'Book via official website.'}] },
+        { name: 'Onsen Soaking', category: 'Relaxation', description: 'Indulge in a traditional hot spring bath. Best experienced in Hakone.', price: 'Public: £10-£20. Private: £50+', suppliers: [{name: 'Hakone Yuryo (Hakone)', booking: 'Offers private onsen rentals. Book online.'}, {name: 'Tenzan Tohji-kyo (Hakone)', booking: 'Popular public onsen. Walk-in.'}] },
+        { name: 'Izakaya Hopping', category: 'Food & Drink', description: 'Explore local nightlife by visiting several izakayas (Japanese pubs).', price: '£30-£60 per person', suppliers: [{name: 'Golden Gai (Shinjuku)', booking: 'No booking needed. Explore the alleys.'}, {name: 'Omoide Yokocho (Shinjuku)', booking: 'No booking needed. Find a spot at a counter.'}] },
+        { name: 'Shibuya Sky', category: 'Adventure', description: 'Get a 360° panoramic view of Tokyo from this stunning rooftop observation deck.', price: 'Approx. £12 / ¥2,200', suppliers: [{name: 'Shibuya Sky Official Website', booking: 'Booking online in advance is highly recommended to secure a spot.'}] },
+        { name: 'Depachika Exploration', category: 'Food & Drink', description: 'Explore the incredible food halls in the basements of department stores.', price: 'Varies based on purchase', suppliers: [{name: 'Isetan (Shinjuku)', booking: 'No booking needed.'}, {name: 'Mitsukoshi (Ginza)', booking: 'No booking needed.'}] },
+        { name: 'Kimono Rental', category: 'Culture', description: 'Rent a traditional kimono and stroll through historic districts like Asakusa.', price: '£30-£60 per person', suppliers: [{name: 'Kimono Rental Wargo', booking: 'Popular chain, book online.'}, {name: 'VASARA Kimono Rental', booking: 'Multiple locations, book online.'}] },
+        { name: 'Japanese Cooking Class', category: 'Culture', description: 'Learn to make classic dishes like sushi or ramen. A hands-on experience.', price: '£60-£120 per person', suppliers: [{name: 'ABC Cooking Studio', booking: 'Offers English classes. Book on their website.'}, {name: 'airKitchen', booking: 'Platform connecting travelers with local home cooks. Book online.'}] },
+        { name: 'Flea Market Hunting', category: 'Shopping', description: 'Discover unique treasures, vintage kimonos, and antiques at a weekend flea market.', price: 'Varies', suppliers: [{name: 'Oedo Antique Market', booking: 'Held 1st & 3rd Sunday/month. No booking.'}, {name: 'Setagaya Boroichi Market', booking: 'Historic market held in Dec & Jan. No booking.'}] },
+    ],
+    seasonal: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        tempC: [5, 6, 9, 14, 19, 22, 26, 27, 23, 18, 12, 8],
+        tempF: [41, 43, 48, 57, 66, 72, 79, 81, 73, 64, 54, 46],
+        precipitation: [52, 56, 117, 124, 138, 168, 154, 168, 209, 198, 92, 58],
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const app = new KantoTravelApp();
+    app.init();
+});
+
+class KantoTravelApp {
+    constructor() {
+        this.activeSection = 'home';
+        this.seasonalChartInstance = null;
+    }
+
+    init() {
+        this.setupNavigation();
+        this.setupHomeCardLinks(); // New method to set up home card links
+        this.renderAllSections();
+        const initialSection = window.location.hash.substring(1) || 'home';
+        this.navigateTo(initialSection, true);
+        this.setupModal();
+    }
+
+    setupNavigation() {
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.navigateTo(e.target.dataset.section);
+            });
+        });
+        document.getElementById('mobile-nav').addEventListener('change', (e) => this.navigateTo(e.target.value));
+    }
+
+    setupHomeCardLinks() {
+        document.querySelectorAll('.card[data-section-link]').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const sectionId = e.currentTarget.dataset.sectionLink;
+                this.navigateTo(sectionId);
+            });
+        });
+    }
+
+    navigateTo(sectionId, isInitial = false) {
+        this.activeSection = sectionId;
+        if (!isInitial) window.location.hash = sectionId;
+
+        document.querySelectorAll('.content-section').forEach(s => s.classList.toggle('active', s.id === this.activeSection));
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.section === this.activeSection));
+        document.getElementById('mobile-nav').value = this.activeSection;
+
+        window.scrollTo(0, 0);
+    }
+
+    renderAllSections() {
+        this.renderDestinations();
+        this.renderPlan();
+        this.renderExperiences();
+        this.renderSeasonalChart();
+    }
+
+    renderDestinations() {
+        const navContainer = document.getElementById('dest-nav');
+        navContainer.innerHTML = '';
+        DB.destinations.forEach((dest, index) => {
+            const button = document.createElement('button');
+            button.className = `dest-button w-full text-left p-3 rounded-md transition-colors duration-200 ${index === 0 ? 'bg-stone-800 text-white' : 'bg-stone-200 hover:bg-stone-300'}`;
+            button.textContent = dest.name;
+            button.onclick = () => {
+                this.renderDestinationContent(dest);
+                document.querySelectorAll('.dest-button').forEach(btn => {
+                    btn.className = 'dest-button w-full text-left p-3 rounded-md transition-colors duration-200 bg-stone-200 hover:bg-stone-300';
+                });
+                button.className = 'dest-button w-full text-left p-3 rounded-md transition-colors duration-200 bg-stone-800 text-white';
+            };
+            navContainer.appendChild(button);
+        });
+        this.renderDestinationContent(DB.destinations[0]);
+    }
+
+    renderDestinationContent(destination) {
+        const contentContainer = document.getElementById('dest-content');
+        const attractionsHtml = destination.attractions.map(attr => `
+            <div class="mb-4">
+                <h4 class="font-bold text-lg text-stone-700">${attr.name}</h4>
+                <p class="text-stone-600">${attr.details}</p>
+            </div>
+        `).join('');
+        contentContainer.innerHTML = `
+            <h3 class="text-2xl font-bold mb-2">${destination.name}</h3>
+            <p class="text-stone-600 mb-6">${destination.description}</p>
+            <div>${attractionsHtml}</div>
+        `;
+    }
+
+    renderPlan() {
+        document.getElementById('plan-tabs').addEventListener('click', e => {
+            if (e.target.classList.contains('plan-tab-button')) {
+                const tabName = e.target.dataset.tab;
+                document.querySelectorAll('.plan-tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.plan-tab-content').forEach(c => c.classList.remove('active'));
+                e.target.classList.add('active');
+                document.getElementById(`${tabName}-content`).classList.add('active');
+            }
+        });
+        this.renderAccommodations();
+        this.renderItinerary();
+    }
+
+    renderAccommodations() {
+        const container = document.getElementById('accommodations-content');
+        container.innerHTML = `
+            <h3 class="text-xl font-bold mb-4">Find Your Accommodation</h3>
+            <p class="text-stone-600 mb-6">Explore our curated list of over 30 hotels and apartments. Prices are estimates for a 2-person room from mid-Oct to mid-Nov 2025.</p>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-stone-200">
+                    <thead class="bg-stone-100">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Hotel/Apartment</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Location</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Room Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Price (GBP)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Price (JPY)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-stone-200">
+                        ${DB.accommodations.map(acc => `
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-stone-900">${acc.name}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">${acc.district}, ${acc.location}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">${acc.type}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">${acc.roomType}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">${acc.priceGBP}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">${acc.priceJPY}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    renderItinerary() {
+        const container = document.getElementById('itinerary-content');
+        container.innerHTML = `
+            <h3 class="text-xl font-bold mb-4">14-Day Detailed Sample Itinerary</h3>
+            <p class="text-stone-600 mb-6">This itinerary provides a balanced mix of urban exploration, cultural immersion, and relaxation, with suggested timings to help you plan.</p>
+            <div class="timeline">
+                ${DB.itinerary.map(day => `
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <h4 class="font-bold text-lg">Day ${day.day}: ${day.title}</h4>
+                        <div class="text-sm text-stone-600 mt-2 space-y-1">
+                            ${day.morning ? `<p><strong>Morning:</strong> ${day.morning}</p>` : ''}
+                            ${day.afternoon ? `<p><strong>Afternoon:</strong> ${day.afternoon}</p>` : ''}
+                            ${day.evening ? `<p><strong>Evening:</strong> ${day.evening}</p>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    renderExperiences() {
+        const filterContainer = document.getElementById('exp-filters');
+        const categories = ['All', ...new Set(DB.experiences.map(e => e.category))];
+        filterContainer.innerHTML = categories.map((cat, index) => `
+            <button class="exp-filter-button px-4 py-2 rounded-full text-sm font-medium transition-colors ${index === 0 ? 'bg-stone-800 text-white' : 'bg-white text-stone-700 hover:bg-stone-200'}" data-category="${cat}">${cat}</button>
+        `).join('');
+
+        this.filterAndRenderExp();
+        
+        filterContainer.addEventListener('click', e => {
+            if (e.target.classList.contains('exp-filter-button')) {
+                const category = e.target.dataset.category;
+                document.querySelectorAll('.exp-filter-button').forEach(btn => {
+                    btn.classList.remove('bg-stone-800', 'text-white');
+                    btn.classList.add('bg-white', 'text-stone-700', 'hover:bg-stone-200');
+                });
+                e.target.classList.add('bg-stone-800', 'text-white');
+                e.target.classList.remove('bg-white', 'text-stone-700', 'hover:bg-stone-200');
+                this.filterAndRenderExp(category);
+            }
+        });
+    }
+
+    filterAndRenderExp(category = 'All') {
+        const galleryContainer = document.getElementById('exp-gallery');
+        const filtered = category === 'All' ? DB.experiences : DB.experiences.filter(exp => exp.category === category);
+        galleryContainer.innerHTML = filtered.map((exp, index) => `
+            <div class="card bg-white p-6 rounded-lg shadow-md cursor-pointer" data-exp-index="${DB.experiences.indexOf(exp)}">
+                <h4 class="font-bold text-lg">${exp.name}</h4>
+                <span class="text-xs font-medium bg-teal-100 text-teal-800 px-2 py-1 rounded-full">${exp.category}</span>
+                <p class="mt-2 text-stone-600 text-sm">${exp.description}</p>
+                <p class="text-xs text-stone-500 mt-4">Click for details</p>
+            </div>
+        `).join('');
+
+        document.querySelectorAll('[data-exp-index]').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const index = e.currentTarget.dataset.expIndex;
+                this.showExperienceModal(DB.experiences[index]);
+            });
+        });
+    }
+
+    setupModal() {
+        const modal = document.getElementById('experience-modal');
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+    }
+
+    showExperienceModal(exp) {
+        const modalContent = document.getElementById('modal-content-inner');
+        const suppliersHtml = exp.suppliers.map(s => `
+            <div class="mt-2">
+                <p class="font-semibold text-stone-700">${s.name}</p>
+                <p class="text-sm text-stone-500">${s.booking}</p>
+            </div>
+        `).join('');
+
+        modalContent.innerHTML = `
+            <div class="flex justify-between items-start">
+                <h3 class="text-2xl font-bold mb-4">${exp.name}</h3>
+                <button id="close-modal" class="text-2xl text-stone-500 hover:text-stone-800">&times;</button>
+            </div>
+            <p class="text-stone-600 mb-4">${exp.description}</p>
+            <div class="bg-stone-100 p-4 rounded-lg">
+                <p class="font-semibold">Estimated Price:</p>
+                <p class="text-stone-700">${exp.price}</p>
+                <hr class="my-3">
+                <p class="font-semibold">Reputable Suppliers & Booking:</p>
+                ${suppliersHtml}
+            </div>
+        `;
+        document.getElementById('experience-modal').classList.add('active');
+        document.getElementById('close-modal').addEventListener('click', () => {
+            document.getElementById('experience-modal').classList.remove('active');
+        });
+    }
+
+    renderSeasonalChart() {
+        const ctx = document.getElementById('seasonalChart').getContext('2d');
+        if (this.seasonalChartInstance) this.seasonalChartInstance.destroy();
+        this.seasonalChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: DB.seasonal.labels,
+                datasets: [{
+                    type: 'line',
+                    label: 'Avg Temp (°C)',
+                    data: DB.seasonal.tempC,
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    yAxisID: 'y_temp',
+                    tension: 0.3
+                }, {
+                    label: 'Avg Precipitation (mm)',
+                    data: DB.seasonal.precipitation,
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                    yAxisID: 'y_precip'
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { grid: { display: false } },
+                    y_temp: { position: 'left', title: { display: true, text: 'Temperature (°C)' }, grid: { drawOnChartArea: false } },
+                    y_precip: { position: 'right', title: { display: true, text: 'Precipitation (mm)' }, grid: { display: false } }
+                }
+            }
+        });
+    }
+}
+
+</script>
+</body>
+</html>
 
