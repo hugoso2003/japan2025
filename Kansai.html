@@ -1,1 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Travel Guide: Kansai Region</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals with Subtle Accents -->
+    <!-- Application Structure Plan: The application is structured as a single-page dashboard with a fixed sidebar for navigation. This allows users to jump between key planning themes—City Guides, Day Trips, Experiences, Accommodations, and Practicalities—without losing context. The main content area uses a card-based layout to present information in digestible chunks. Interactive elements like a budget calculator and seasonal event filters are integrated to provide personalized, actionable insights. This non-linear, thematic structure was chosen over a report-like flow to empower users to plan based on their immediate questions and interests, enhancing usability for independent travelers. -->
+    <!-- Visualization & Content Choices: Report Info -> Key accommodation types and price ranges. Goal -> Help users visualize budget allocation. Viz/Presentation Method -> Interactive Doughnut Chart (Chart.js). Interaction -> Users input their total budget, and the chart dynamically updates to show estimated spending on flights, lodging, food, etc. Justification -> This transforms static price data into a personal planning tool. Report Info -> Various transportation passes and their costs. Goal -> Compare the value of different passes. Viz/Presentation Method -> Dynamic Bar Chart (Chart.js). Interaction -> Users select their travel style (e.g., "City Focused," "Many Day Trips"), and the chart highlights the most cost-effective pass. Justification -> Simplifies a complex decision-making process. All visualizations use Chart.js on a Canvas element. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF8;
+            color: #4A4A4A;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+        .nav-link.active, .nav-link:hover {
+            background-color: #EAE3D9;
+            color: #8C6D46;
+            transform: translateX(4px);
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .tab-button.active {
+            border-bottom-color: #8C6D46;
+            color: #8C6D46;
+            font-weight: 600;
+        }
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #EAE3D9;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -0.4rem;
+            top: 0.5rem;
+            width: 0.8rem;
+            height: 0.8rem;
+            border-radius: 50%;
+            background-color: #8C6D46;
+        }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row">
+
+    <!-- Sidebar Navigation -->
+    <nav id="sidebar" class="w-full md:w-64 bg-[#F5F1EB] p-4 md:p-6 md:h-screen md:sticky top-0">
+        <h1 class="text-2xl font-bold text-[#8C6D46] mb-8">Kansai Unveiled</h1>
+        <ul class="space-y-2">
+            <li><a href="#overview" class="nav-link block p-3 rounded-lg font-medium active">Welcome</a></li>
+            <li><a href="#itinerary" class="nav-link block p-3 rounded-lg font-medium">14-Day Itinerary</a></li>
+            <li><a href="#osaka" class="nav-link block p-3 rounded-lg font-medium">Osaka Guide</a></li>
+            <li><a href="#kyoto" class="nav-link block p-3 rounded-lg font-medium">Kyoto Guide</a></li>
+            <li><a href="#day-trips" class="nav-link block p-3 rounded-lg font-medium">Day Trips & Beyond</a></li>
+            <li><a href="#experiences" class="nav-link block p-3 rounded-lg font-medium">Experiences</a></li>
+            <li><a href="#accommodations" class="nav-link block p-3 rounded-lg font-medium">Accommodations</a></li>
+            <li><a href="#planning" class="nav-link block p-3 rounded-lg font-medium">Plan Your Trip</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 md:p-10 overflow-y-auto">
+
+        <!-- Overview Section -->
+        <section id="overview" class="content-section active">
+            <h2 class="text-3xl font-bold text-[#8C6D46] mb-4">A Couple's Guide to Japan's Heartland</h2>
+            <p class="mb-6 text-lg">Welcome to your interactive guide for an unforgettable two-week journey through Japan's Kansai region. Designed for an adventurous couple in their 30s, this planner balances cultural immersion, culinary delights, and unique experiences in Osaka, Kyoto, and beyond. Use the navigation to explore city guides, discover day trips, and plan the practical details of your trip.</p>
+            
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="text-2xl font-bold text-[#8C6D46] mb-4">Kansai Region at a Glance</h3>
+                <p class="mb-4">The Kansai region, the historical and cultural heart of Japan, offers a compelling blend of ancient tradition and vibrant modernity. Home to former imperial capitals like Kyoto and Nara, it's the birthplace of geisha culture, the tea ceremony, and samurai ethos. Today, it stands as a major economic hub, with Osaka's dynamic food scene and Kobe's international port. This guide focuses on the prime travel season of mid-October to mid-November, when the climate is mild and the autumn foliage is spectacular.</p>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="text-xl font-semibold mb-2">Budget Calculator</h4>
+                        <p class="text-sm mb-4">Estimate your spending for a 14-day trip for two. Enter your total budget (excluding international flights) to see a potential breakdown. This is an estimation to help with planning.</p>
+                        <label for="budget" class="block mb-2 font-medium">Your Total Budget (JPY):</label>
+                        <input type="range" id="budget" min="400000" max="1200000" step="50000" value="700000" class="w-full mb-2">
+                        <div class="text-center font-bold text-lg text-[#8C6D46]" id="budgetValue">¥700,000</div>
+                        <div class="chart-container mt-4">
+                            <canvas id="budgetChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-semibold mb-2">Seasonal Event Finder</h4>
+                        <p class="text-sm mb-4">Kansai's calendar is packed with vibrant festivals. Select a season to discover key events in Osaka and Kyoto that could make your trip even more memorable.</p>
+                        <div class="flex space-x-2 mb-4 rounded-lg bg-[#F5F1EB] p-1">
+                            <button class="season-btn flex-1 p-2 rounded-md text-sm font-medium" data-season="spring">Spring</button>
+                            <button class="season-btn flex-1 p-2 rounded-md text-sm font-medium" data-season="summer">Summer</button>
+                            <button class="season-btn flex-1 p-2 rounded-md text-sm font-medium active" data-season="autumn">Autumn</button>
+                            <button class="season-btn flex-1 p-2 rounded-md text-sm font-medium" data-season="winter">Winter</button>
+                        </div>
+                        <div id="event-display" class="bg-gray-50 p-4 rounded-lg h-80 overflow-y-auto">
+                            <!-- Event content will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 14-Day Itinerary Section -->
+        <section id="itinerary" class="content-section">
+            <h2 class="text-3xl font-bold text-[#8C6D46] mb-4">The Ultimate 14-Day Kansai Itinerary</h2>
+            <p class="mb-6 text-lg">This detailed itinerary is crafted for a food-loving, adventurous couple, balancing iconic sights with hidden gems and relaxation. It assumes a base in Osaka for the first week and Kyoto for the second, minimizing hotel changes while maximizing exploration via day trips.</p>
+            <div id="itinerary-content" class="space-y-8">
+                <!-- Itinerary will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Osaka Section -->
+        <section id="osaka" class="content-section">
+            <h2 class="text-3xl font-bold text-[#8C6D46] mb-4">Osaka: The Nation's Kitchen</h2>
+            <p class="mb-6 text-lg">Dive into the vibrant energy of Osaka, a city famed for its incredible food scene, lively nightlife, and iconic landmarks. This section guides you through the must-see districts, culinary hotspots, and unique shopping experiences.</p>
+            <div class="flex border-b-2 border-gray-200 mb-6">
+                <button class="tab-button py-2 px-4 text-gray-500 border-b-2 border-transparent active" data-target="osaka-sights">Sights & Districts</button>
+                <button class="tab-button py-2 px-4 text-gray-500 border-b-2 border-transparent" data-target="osaka-food">Food & Drink</button>
+                <button class="tab-button py-2 px-4 text-gray-500 border-b-2 border-transparent" data-target="osaka-shopping">Shopping</button>
+            </div>
+            <div id="osaka-content">
+                <!-- Osaka content will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Kyoto Section -->
+        <section id="kyoto" class="content-section">
+            <h2 class="text-3xl font-bold text-[#8C6D46] mb-4">Kyoto: Heart of Tradition</h2>
+            <p class="mb-6 text-lg">Immerse yourself in the timeless beauty of Kyoto, Japan's former imperial capital. Discover serene temples, enchanting bamboo groves, traditional geisha districts, and a world of artisanal crafts.</p>
+             <div class="flex border-b-2 border-gray-200 mb-6">
+                <button class="tab-button py-2 px-4 text-gray-500 border-b-2 border-transparent active" data-target="kyoto-sights">Sights & Temples</button>
+                <button class="tab-button py-2 px-4 text-gray-500 border-b-2 border-transparent" data-target="kyoto-food">Food & Drink</button>
+                <button class="tab-button py-2 px-4 text-gray-500 border-b-2 border-transparent" data-target="kyoto-shopping">Artisanal Shopping</button>
+            </div>
+            <div id="kyoto-content">
+                <!-- Kyoto content will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Day Trips Section -->
+        <section id="day-trips" class="content-section">
+            <h2 class="text-3xl font-bold text-[#8C6D46] mb-4">Day Trips & Beyond</h2>
+            <p class="mb-6 text-lg">Kansai's excellent train network makes exploring beyond the main cities a breeze. This section highlights the best day trips for couples, from historic castles and sacred mountains to charming port towns.</p>
+            <div id="day-trips-content" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Day trip cards will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Experiences Section -->
+        <section id="experiences" class="content-section">
+            <h2 class="text-3xl font-bold text-[#8C6D46] mb-4">Immersive Experiences for Couples</h2>
+            <p class="mb-6 text-lg">Go beyond sightseeing and actively engage with Japanese culture. This section offers ideas for hands-on activities, from traditional craft workshops and cooking classes to scenic hikes and unique local tours.</p>
+            <div id="experiences-content" class="space-y-6">
+                <!-- Experiences content will be loaded here -->
+            </div>
+        </section>
+        
+        <!-- Accommodations Section -->
+        <section id="accommodations" class="content-section">
+            <h2 class="text-3xl font-bold text-[#8C6D46] mb-4">Curated Accommodations</h2>
+            <p class="mb-6 text-lg">This curated list focuses on 3-4 star hotels, boutique properties, and serviced apartments ideal for a couple's two-week stay. Selections prioritize modern amenities, recent renovations (within 5 years), and excellent guest reviews. Prices are estimates for a 2-person room during mid-October to mid-November 2025.</p>
+            <div class="flex border-b-2 border-gray-200 mb-6">
+                <button class="tab-button py-2 px-4 text-gray-500 border-b-2 border-transparent active" data-target="accommodations-osaka">Osaka Stays</button>
+                <button class="tab-button py-2 px-4 text-gray-500 border-b-2 border-transparent" data-target="accommodations-kyoto">Kyoto Stays</button>
+            </div>
+            <div id="accommodations-content" class="overflow-x-auto">
+                 <!-- Accommodation tables will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Planning Section -->
+        <section id="planning" class="content-section">
+            <h2 class="text-3xl font-bold text-[#8C6D46] mb-4">Plan Your Trip: Practicalities</h2>
+            <p class="mb-6 text-lg">This section covers the essential practical information you'll need for a smooth journey, including transportation pass comparisons, budgeting tips, and cultural etiquette.</p>
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="text-2xl font-bold text-[#8C6D46] mb-4">Transportation Pass Advisor</h3>
+                <p class="mb-6">Choosing the right transport pass can be confusing but can save you a lot of money. Use the tool below to see which combination of passes might be most cost-effective for your travel style.</p>
+                
+                <div>
+                    <h4 class="text-xl font-semibold mb-2">Which Pass is Best for You?</h4>
+                    <p class="text-sm mb-4">Select your primary travel style for your 2-week trip to see a comparison.</p>
+                    <select id="travel-style-selector" class="w-full p-2 border rounded-md mb-4">
+                        <option value="city-focused">Mostly Osaka & Kyoto</option>
+                        <option value="many-day-trips">Many Day Trips within Kansai</option>
+                        <option value="beyond-kansai">Traveling Beyond Kansai (e.g., to Tokyo)</option>
+                    </select>
+                    <div class="chart-container">
+                        <canvas id="pass-chart"></canvas>
+                    </div>
+                    <p id="pass-recommendation" class="mt-4 text-center font-medium bg-amber-100 p-3 rounded-lg"></p>
+                </div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-xl shadow-sm mt-8">
+                <h3 class="text-2xl font-bold text-[#8C6D46] mb-4">Money & Budgeting Tips</h3>
+                <div id="budgeting-content" class="prose max-w-none">
+                     <!-- Budgeting content will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+    
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const navLinks = document.querySelectorAll('.nav-link');
+    const contentSections = document.querySelectorAll('.content-section');
+    const budgetSlider = document.getElementById('budget');
+    const budgetValue = document.getElementById('budgetValue');
+    const seasonButtons = document.querySelectorAll('.season-btn');
+    const eventDisplay = document.getElementById('event-display');
+    const travelStyleSelector = document.getElementById('travel-style-selector');
+
+    const data = {
+        seasonalEvents: {
+            spring: {
+                title: "Spring (March - May): Cherry Blossoms & Festivals",
+                events: [
+                    { city: 'Osaka', name: 'Hanami (Cherry Blossom Viewing)', desc: 'Spectacular viewing at Osaka Castle Park and Kema Sakuranomiya Park, often with evening illuminations.' },
+                    { city: 'Osaka', name: 'Otaue Rice Planting Festival (June 14)', desc: 'A traditional festival at Sumiyoshi Taisha Shrine celebrating the planting of rice with ancient rituals and performances.' },
+                    { city: 'Kyoto', name: 'Aoi Matsuri (May 15)', desc: 'One of Kyoto\'s three great festivals, featuring a large, elegant procession in Heian period costumes from the Imperial Palace to the Kamo Shrines.' },
+                    { city: 'Kyoto', name: 'Miyako Odori (April)', desc: 'A famous dance performance by the geiko and maiko of Gion Kobu, a quintessential Kyoto experience.' }
+                ]
+            },
+            summer: {
+                title: "Summer (June - August): Vibrant Matsuri & Fireworks",
+                events: [
+                    { city: 'Osaka', name: 'Tenjin Matsuri (July 24-25)', desc: 'One of Japan\'s top three festivals, featuring grand processions on land and river, with fireworks.' },
+                    { city: 'Osaka', name: 'Naniwa Yodogawa Fireworks Festival (August)', desc: 'A massive and spectacular fireworks display over the Yodo River.' },
+                    { city: 'Kyoto', name: 'Gion Matsuri (July)', desc: 'A month-long festival, the most famous in Japan, culminating in a grand procession of massive, ornate floats (Yamaboko Junko).' },
+                    { city: 'Kyoto', name: 'Gozan no Okuribi (August 16)', desc: 'A solemn event where giant bonfires in the shape of characters are lit on the mountains surrounding Kyoto to guide ancestral spirits.' }
+                ]
+            },
+            autumn: {
+                title: "Autumn (Sept - Nov): Foliage & Culture",
+                events: [
+                    { city: 'Osaka', name: 'Kishiwada Danjiri Matsuri (September)', desc: 'A high-energy, thrilling festival where teams pull heavy, ornate wooden floats (danjiri) at high speeds through the streets.' },
+                    { city: 'Osaka', name: 'Midosuji Autumn Party', desc: 'The main boulevard of Osaka is decorated with stunning illuminations and hosts various events.' },
+                    { city: 'Kyoto', name: 'Jidai Matsuri (October 22)', desc: 'The "Festival of the Ages," featuring a large parade with participants dressed in authentic costumes from every period of Japanese history.' },
+                    { city: 'Kyoto', name: 'Kurama Fire Festival (October 22)', desc: 'A dramatic and powerful festival in the mountain village of Kurama, where men carry giant flaming torches.' }
+                ]
+            },
+            winter: {
+                title: "Winter (Dec - Feb): Illuminations & Serenity",
+                events: [
+                    { city: 'Osaka', name: 'Osaka Hikari Renaissance', desc: 'A beautiful winter illumination event in the Nakanoshima area, featuring light art and projections.' },
+                    { city: 'Kyoto', name: 'Joya no Kane (Dec 31)', desc: 'On New Year\'s Eve, temple bells across Kyoto are rung 108 times to cleanse humanity of the 108 worldly desires.' },
+                    { city: 'Kyoto', name: 'Arashiyama Hanatouro (December)', desc: 'The Arashiyama Bamboo Grove and surrounding areas are beautifully illuminated with thousands of lanterns, creating a magical atmosphere.' },
+                    { city: 'Nara', name: 'Wakakusa Yamayaki (4th Sat in Jan)', desc: 'An entire mountainside is set ablaze in this dramatic festival, preceded by a fireworks display.' }
+                ]
+            }
+        },
+        itinerary: [
+            { day: 1, title: "Arrival in Osaka & Dotonbori Immersion", base: "Osaka",
+              morning: "<strong>(Afternoon Arrival)</strong> Arrive at Kansai International Airport (KIX). Clear immigration, pick up luggage. Purchase ICOCA cards for local transport. Take the Nankai Rapi:t Express to Namba Station (~40 mins). Check into your Osaka hotel/apartment in the Namba area.",
+              afternoon: "<strong>(4:00 PM - 6:00 PM)</strong> Settle in and take a short rest. Begin your exploration with a walk to the iconic Dotonbori district. Marvel at the giant neon signs like the Glico Running Man and the Kani Doraku crab.",
+              evening: "<strong>(6:00 PM onwards)</strong> Dive into Osaka's food scene with a street food dinner crawl in Dotonbori. Sample takoyaki, okonomiyaki, and kushikatsu. Afterwards, take a leisurely stroll through the atmospheric, lantern-lit Hozenji Yokocho alley."
+            },
+            { day: 2, title: "Osaka's Castle, Heights & Retro Charm", base: "Osaka",
+              morning: "<strong>(9:00 AM - 12:00 PM)</strong> Visit the magnificent Osaka Castle. Explore the museum inside and enjoy panoramic city views from the top floor. Afterwards, wander through the surrounding park.",
+              afternoon: "<strong>(1:00 PM - 5:00 PM)</strong> Head to the Shinsekai district. Ascend the Tsutenkaku Tower for views and a glimpse of retro Osaka. Explore the nostalgic streets and have a late lunch of kushikatsu at a local restaurant like Daruma.",
+              evening: "<strong>(6:00 PM onwards)</strong> Travel to Umeda. Ascend the Umeda Sky Building for breathtaking night views from the Floating Garden Observatory. Enjoy dinner at one of the many restaurants in the Umeda area."
+            },
+            { day: 3, title: "Nara Day Trip: Deer & Daibutsu", base: "Osaka",
+              morning: "<strong>(9:00 AM - 1:00 PM)</strong> Take the Kintetsu Line from Osaka-Namba to Kintetsu-Nara Station (~40 mins). Walk to Nara Park, greet the friendly (and bowing!) deer. Visit the immense Todai-ji Temple to see the Great Buddha (Daibutsu).",
+              afternoon: "<strong>(1:00 PM - 4:30 PM)</strong> After lunch near the park, wander through the lantern-lined paths to the beautiful Kasuga Taisha Shrine. Explore the traditional shops and storehouses in the Naramachi district on your way back to the station.",
+              evening: "<strong>(5:00 PM onwards)</strong> Return to Osaka. For dinner, explore the vibrant food scene in the Namba or Shinsaibashi areas, trying a different local specialty."
+            },
+            { day: 4, title: "Adventure & Relaxation: USJ or Spa Day", base: "Osaka",
+              morning: "<strong>Option A (Adventure):</strong> Take the JR Yumesaki Line to Universal City Station. Spend the morning exploring Universal Studios Japan (USJ), focusing on high-demand areas like Super Nintendo World first. <strong>Option B (Relaxation):</strong> Enjoy a leisurely morning. Explore the Kuromon Ichiba Market for a brunch of fresh seafood and local produce.",
+              afternoon: "<strong>Option A:</strong> Continue enjoying the rides and shows at USJ. <strong>Option B:</strong> Head to Solaniwa Onsen at Osaka Bay Tower. Book a private onsen for a couple's relaxation session and enjoy the various themed baths.",
+              evening: "<strong>Option A:</strong> Have dinner at one of the many restaurants in Universal CityWalk before heading back to your hotel. <strong>Option B:</strong> After your onsen experience, enjoy a relaxed dinner in the Bay Area or head back to Namba for more culinary exploration."
+            },
+             { day: 5, title: "Kobe Day Trip: Beef, Sake & Views", base: "Osaka",
+              morning: "<strong>(9:30 AM - 1:00 PM)</strong> Take a JR Special Rapid train from Osaka Station to Sannomiya Station in Kobe (~25 mins). Head to a reputable restaurant for an early Kobe beef lunch (lunch sets are more affordable).",
+              afternoon: "<strong>(1:00 PM - 5:00 PM)</strong> Explore the Nada district, Japan's leading sake-producing region. Visit a sake brewery museum like Hakutsuru for a tasting. Afterwards, take the Shin-Kobe Ropeway up Mount Rokko for stunning views of the city and harbor from the Nunobiki Herb Gardens.",
+              evening: "<strong>(5:30 PM onwards)</strong> Descend and explore the scenic Kobe Harborland and Meriken Park as the sun sets. Enjoy the illuminated Port Tower and Maritime Museum. Have a light dinner or drinks in Harborland before taking the train back to Osaka."
+            },
+            { day: 6, title: "Osaka's Culture & Shopping", base: "Osaka",
+              morning: "<strong>(10:00 AM - 1:00 PM)</strong> Visit the Osaka Museum of Housing and Living to walk through a life-sized recreation of an Edo Period town. Alternatively, explore the unique Sumiyoshi Taisha, one of Japan's oldest shrines, known for its distinct architecture.",
+              afternoon: "<strong>(1:30 PM - 5:30 PM)</strong> Dive into Osaka's shopping scene. Explore the trendy boutiques and cafes of Tachibana-dori (Orange Street). Then, wander through Amerika-mura for vintage finds and youth culture.",
+              evening: "<strong>(6:00 PM onwards)</strong> For your final night in Osaka, enjoy a special dinner. Afterwards, seek out a hidden speakeasy like Bar Nayuta for expertly crafted cocktails to toast to your time in the city."
+            },
+             { day: 7, title: "Travel to Kyoto & Gion's Charm", base: "Kyoto",
+              morning: "<strong>(9:00 AM - 11:00 AM)</strong> Check out of your Osaka hotel. Take a JR Special Rapid train from Osaka to Kyoto Station (~30 mins). Travel to your Kyoto accommodation, drop off your luggage.",
+              afternoon: "<strong>(12:00 PM - 5:00 PM)</strong> After lunch near your hotel, begin exploring the historic Higashiyama district. Walk up the charming Sannenzaka and Ninenzaka slopes, browsing the traditional shops. Visit the beautiful Kodai-ji Temple and the adjacent Yasaka Shrine.",
+              evening: "<strong>(5:30 PM onwards)</strong> As dusk falls, explore the famous Gion district. Walk along Hanamikoji Street and the atmospheric Pontocho Alley, hoping for a glimpse of a geiko or maiko. Enjoy dinner in Gion, followed by drinks at a traditional bar."
+            },
+             { day: 8, title: "Kyoto's Iconic Temples", base: "Kyoto",
+              morning: "<strong>(8:00 AM - 12:00 PM)</strong> Start early and take a bus to Kiyomizu-dera Temple. Explore its famous wooden stage and enjoy the panoramic views before the biggest crowds arrive.",
+              afternoon: "<strong>(1:00 PM - 4:30 PM)</strong> Head to Northern Kyoto. Visit the stunning Kinkaku-ji (Golden Pavilion), followed by the meditative Ryoan-ji with its famous Zen rock garden.",
+              evening: "<strong>(6:00 PM onwards)</strong> Return to central Kyoto. For dinner, explore the area around your hotel or try a modern kaiseki restaurant for an accessible fine dining experience."
+            },
+            { day: 9, title: "Arashiyama's Natural Beauty", base: "Kyoto",
+              morning: "<strong>(8:30 AM - 12:00 PM)</strong> Take the JR Sagano Line to Saga-Arashiyama. Walk through the enchanting Arashiyama Bamboo Grove. Visit the UNESCO-listed Tenryu-ji Temple and its beautiful garden.",
+              afternoon: "<strong>(12:30 PM - 4:30 PM)</strong> After lunch in Arashiyama, cross the iconic Togetsukyo Bridge. Consider a scenic Hozugawa River Boat Ride for a different perspective of the gorge. Alternatively, visit the Iwatayama Monkey Park for a short hike and playful encounters.",
+              evening: "<strong>(5:30 PM onwards)</strong> Return to Kyoto. Enjoy a relaxed dinner. For a unique experience, consider a non-verbal show at GEAR Theatre."
+            },
+             { day: 10, title: "Fushimi Inari & Sake Tasting", base: "Kyoto",
+              morning: "<strong>(8:00 AM - 11:30 AM)</strong> Take the JR Nara Line to Inari Station. Hike through the thousands of vermilion torii gates at Fushimi Inari Shrine. The full loop takes 2-3 hours; go at least halfway up for great views and fewer people.",
+              afternoon: "<strong>(12:00 PM - 4:00 PM)</strong> Explore the Fushimi Sake District, a short train ride away. Visit the Gekkeikan Okura Sake Museum for a history lesson and tasting. Enjoy lunch at a restaurant in the district.",
+              evening: "<strong>(6:00 PM onwards)</strong> For a special evening, book a reservation at a high-end restaurant in Gion or Pontocho. Afterwards, find a sophisticated cocktail bar like K36 The Bar & Rooftop for stunning night views of the city."
+            },
+             { day: 11, title: "Imperial History & Culinary Exploration", base: "Kyoto",
+              morning: "<strong>(9:30 AM - 12:30 PM)</strong> Visit Nijo Castle, the former residence of the Tokugawa shoguns. Explore the ornate palaces with their 'nightingale floors' and beautiful gardens.",
+              afternoon: "<strong>(1:00 PM - 4:00 PM)</strong> Immerse yourselves in Kyoto's culinary heart at Nishiki Market. Graze your way through the market for lunch, sampling everything from sashimi skewers to soymilk doughnuts and pickles.",
+              evening: "<strong>(5:00 PM onwards)</strong> Participate in a Japanese cooking class to learn the art of making sushi or a traditional bento box. Enjoy the meal you prepared for dinner."
+            },
+            { day: 12, title: "Philosopher's Path & Artistic Immersion", base: "Kyoto",
+              morning: "<strong>(9:00 AM - 12:00 PM)</strong> Visit Ginkaku-ji (Silver Pavilion) and its beautiful moss and sand gardens. From there, begin a leisurely stroll south along the Philosopher's Path, a scenic canal-side walk.",
+              afternoon: "<strong>(12:30 PM - 4:30 PM)</strong> Continue along the path, stopping at smaller temples like Honen-in along the way. End your walk at Nanzen-ji Temple, with its impressive Sanmon gate and aqueduct. Enjoy a traditional yudofu (boiled tofu) lunch near Nanzen-ji.",
+              evening: "<strong>(5:30 PM onwards)</strong> Experience a traditional tea ceremony in Gion to learn about this refined art form. Afterwards, enjoy a final kaiseki dinner to celebrate your time in Kyoto."
+            },
+            { day: 13, title: "Relaxed Exploration & Souvenir Shopping", base: "Kyoto",
+              morning: "<strong>(10:00 AM - 1:00 PM)</strong> Enjoy a relaxed morning. Visit a local market like the Kobo-san Market (21st of the month) or Tenjin-san Market (25th of the month) if your dates align, for antiques and crafts. Otherwise, explore the artisanal shops in the Higashiyama or Gion districts for last-minute souvenirs.",
+              afternoon: "<strong>(1:00 PM - 4:00 PM)</strong> Revisit a favorite spot, or explore a new neighborhood. Consider a cycling tour along the Kamo River for a different perspective of the city.",
+              evening: "<strong>(5:00 PM onwards)</strong> Pack and prepare for departure. Enjoy a farewell dinner at a favorite restaurant or try a new one you've had your eye on."
+            },
+            { day: 14, title: "Departure", base: "Kyoto",
+              morning: "Enjoy a final Japanese breakfast. Depending on your flight time, you might have time for some last-minute shopping at Kyoto Station.",
+              afternoon: "Take the JR Haruka Express train directly from Kyoto Station to Kansai International Airport (KIX) (~80 mins). Arrive at least 2-3 hours before your departure.",
+              evening: "Depart from KIX."
+            }
+        ],
+        osaka: {
+            sights: `
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Osaka Castle</h4>
+                        <p class="text-sm">A majestic symbol of Osaka's history, the castle tower is a five-story reconstruction housing a museum on its history. The surrounding park is a vast green space perfect for a stroll, especially during cherry blossom season. The castle is beautifully illuminated at night.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Dotonbori & Namba</h4>
+                        <p class="text-sm">The iconic heart of Osaka's nightlife and entertainment (Minami area). Dotonbori is a sensory explosion of neon lights, giant billboards (like the Glico Running Man), and endless street food. Namba is the larger district encompassing Dotonbori, with major shopping centers like Namba Parks and Takashimaya.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Umeda (Kita Area)</h4>
+                        <p class="text-sm">Osaka's main business and transportation hub, characterized by modern skyscrapers. Key sights include the Umeda Sky Building with its "Floating Garden Observatory" for breathtaking 360-degree views, and the HEP Five Ferris Wheel. It's also a major shopping destination with huge department stores.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Shinsekai</h4>
+                        <p class="text-sm">Meaning "New World," this district is ironically a retro blast from the past, modeled after Paris and New York. It's known for the Tsutenkaku Tower, its nostalgic atmosphere, and being the origin of kushikatsu.</p>
+                    </div>
+                </div>
+            `,
+            food: `
+                <div class="space-y-4">
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Must-Try Street Food</h4>
+                        <ul class="list-disc list-inside text-sm space-y-1">
+                            <li><strong>Takoyaki:</strong> Octopus-filled dough balls, crispy on the outside, gooey on the inside. A quintessential Osaka snack.</li>
+                            <li><strong>Okonomiyaki:</strong> A savory pancake filled with cabbage, meat, and seafood, grilled as you like it.</li>
+                            <li><strong>Kushikatsu:</strong> Skewered and deep-fried meat, vegetables, and even cheese. Remember the golden rule: no double-dipping in the sauce!</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Notable Markets & Bars</h4>
+                        <p class="text-sm mb-2"><strong>Kuromon Ichiba Market:</strong> Known as "Osaka's Kitchen," this market is a paradise for foodies. Sample fresh sashimi, grilled scallops, and premium Kobe beef.</p>
+                        <p class="text-sm"><strong>Unique Bars:</strong> For a memorable night, seek out a hidden speakeasy like <strong>Bar Nayuta</strong> in Shinsaibashi, where bartenders craft bespoke cocktails based on your preferences.</p>
+                    </div>
+                </div>
+            `,
+            shopping: `
+                <div class="space-y-4">
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Major Shopping Districts</h4>
+                        <ul class="list-disc list-inside text-sm space-y-1">
+                            <li><strong>Shinsaibashi-suji:</strong> A massive covered shopping arcade with everything from major brands to small boutiques.</li>
+                            <li><strong>Umeda:</strong> Home to huge department stores like Hankyu and Daimaru, and modern complexes like Grand Front Osaka.</li>
+                            <li><strong>Amerika-mura:</strong> "American Village," the hub for youth fashion, vintage clothing, and trendy cafes.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Shopping Beyond the Big Names</h4>
+                        <p class="text-sm mb-2"><strong>Tachibana-dori (Orange Street):</strong> One of Osaka's hippest areas, filled with independent fashion boutiques, stylish homeware stores, and artisanal coffee shops.</p>
+                        <p class="text-sm"><strong>Sennichimae Doguyasuji:</strong> A fascinating street dedicated entirely to kitchenware, from professional-grade knives to quirky takoyaki pans. A must-visit for any food lover.</p>
+                    </div>
+                </div>
+            `
+        },
+        kyoto: {
+            sights: `
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Kiyomizu-dera & Higashiyama</h4>
+                        <p class="text-sm">A stunning temple famous for its large wooden stage that juts out from the hillside, offering incredible views. The walk up through the historic Higashiyama district, with its preserved Sannenzaka and Ninenzaka slopes, is part of the experience.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Fushimi Inari Shrine</h4>
+                        <p class="text-sm">Iconic for its thousands of vibrant vermilion torii gates that form a winding path up a mountain. Go early in the morning to experience its magical atmosphere without the crowds. The full hike is rewarding and offers great views.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Arashiyama District</h4>
+                        <p class="text-sm">A scenic area in western Kyoto. Its main draws are the enchanting Bamboo Grove and the iconic Togetsukyo Bridge. The area is also home to beautiful temples like Tenryu-ji and the Iwatayama Monkey Park.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Gion District</h4>
+                        <p class="text-sm">Kyoto's most famous geisha district. Explore its traditional wooden machiya houses, tea houses, and exclusive restaurants. The atmospheric Pontocho Alley runs parallel to the Kamo River and is especially charming at night.</p>
+                    </div>
+                </div>
+            `,
+            food: `
+                <div class="space-y-4">
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Kyoto's Culinary Traditions</h4>
+                        <ul class="list-disc list-inside text-sm space-y-1">
+                            <li><strong>Kaiseki Ryori:</strong> The pinnacle of Japanese haute cuisine. A multi-course, artistic meal that emphasizes seasonality and balance. A special occasion treat.</li>
+                            <li><strong>Shojin Ryori:</strong> Traditional Buddhist vegetarian cuisine, often found at temples. It's elegant, healthy, and delicious.</li>
+                            <li><strong>Matcha Everything:</strong> Kyoto is the home of high-quality matcha. Indulge in matcha tea, parfaits, ice cream, and even savory matcha noodles.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Nishiki Market & Pontocho Alley</h4>
+                        <p class="text-sm mb-2"><strong>Nishiki Market:</strong> Known as "Kyoto's Kitchen," this narrow, five-block long shopping street is lined with more than one hundred shops and restaurants. It's the best place to sample Kyoto's culinary delights, from pickles to fresh seafood.</p>
+                        <p class="text-sm"><strong>Pontocho Alley:</strong> A narrow, atmospheric alley running parallel to the Kamo River, packed with a wide range of restaurants from inexpensive yakitori to exclusive establishments. It's especially charming at night.</p>
+                    </div>
+                </div>
+            `,
+            shopping: `
+                <div class="space-y-4">
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Traditional Crafts</h4>
+                        <p class="text-sm">Kyoto is a treasure trove of artisanal goods. Seek out shops specializing in:</p>
+                        <ul class="list-disc list-inside text-sm space-y-1">
+                            <li><strong>Kiyomizu-yaki Pottery:</strong> Beautifully handcrafted ceramics known for their intricate designs and vibrant colors.</li>
+                            <li><strong>Kyo-sensu Folding Fans:</strong> Elegant fans made from bamboo and washi paper, perfect as a beautiful and practical souvenir.</li>
+                            <li><strong>Nishijin-ori Textiles:</strong> Luxurious woven fabrics used for kimono obi, available as smaller items like purses and accessories.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <h4 class="font-bold text-lg mb-2">Independent Boutiques & Markets</h4>
+                        <p class="text-sm mb-2"><strong>Teramachi & Shinkyogoku Arcades:</strong> These covered shopping streets offer a mix of modern shops, souvenir stores, and traditional sellers.</p>
+                        <p class="text-sm"><strong>Monthly Markets:</strong> Check the calendar for the <strong>Kobo-san Market</strong> at Toji Temple (21st of the month) or the <strong>Tenjin-san Market</strong> at Kitano Tenmangu Shrine (25th of the month) for antiques, vintage kimono, crafts, and food stalls.</p>
+                    </div>
+                </div>
+            `
+        },
+        dayTrips: [
+            { name: 'Nara', desc: 'Home to friendly, bowing deer and the giant bronze Buddha at Todai-ji Temple. An easy and essential day trip.', from: 'Osaka/Kyoto', time: '~35-45 min', cost: 'Low', ideal: 'history, nature, and cute animals.' },
+            { name: 'Himeji Castle', desc: 'Visit Japan\'s most spectacular and best-preserved feudal castle, a UNESCO World Heritage site known as the "White Heron Castle".', from: 'Osaka/Kyoto', time: '~60-90 min', cost: 'Medium', ideal: 'history buffs and architecture lovers.' },
+            { name: 'Kobe', desc: 'A sophisticated port city famous for its delicious Kobe beef, scenic harbor, and sake breweries in the Nada district.', from: 'Osaka/Kyoto', time: '~20-50 min', cost: 'Low', ideal: 'foodies and those seeking a cosmopolitan vibe.' },
+            { name: 'Kinosaki Onsen', desc: 'A charming, old-fashioned hot spring town. Spend the day "onsen hopping" between the seven public bathhouses in a traditional yukata.', from: 'Kyoto/Osaka', time: '~2.5 hours', cost: 'High', ideal: 'ultimate relaxation and a traditional onsen experience.' },
+            { name: 'Mount Koya (Koyasan)', desc: 'A sacred mountain and the center of Shingon Buddhism. Explore the mystical Okunoin Cemetery and consider an overnight temple stay.', from: 'Osaka', time: '~2 hours', cost: 'Medium', ideal: 'a spiritual and deeply cultural experience.' },
+            { name: 'Amanohashidate', desc: 'View one of Japan\'s "Three Most Scenic Views," a stunning pine-covered sandbar that spans a bay on the Tango Peninsula.', from: 'Kyoto', time: '~2 hours', cost: 'High', ideal: 'breathtaking natural scenery.' }
+        ],
+        experiences: `
+            <div class="bg-white p-6 rounded-lg shadow-sm">
+                <h4 class="font-bold text-lg mb-2">Cultural Immersion</h4>
+                <ul class="list-disc list-inside text-sm space-y-2">
+                    <li><strong>Traditional Tea Ceremony:</strong> Participate in this graceful ritual. <strong>Maikoya Kyoto</strong> offers authentic 45-min experiences (~¥3,500 / £18). Book via their website. For a more in-depth class, Klook offers options with renowned masters.</li>
+                    <li><strong>Cooking Class:</strong> Learn to make iconic dishes. In Osaka, <strong>AirKitchen</strong> offers classes like ramen & gyoza for ~¥13,500 / £68. In Kyoto, find sushi or bento classes on platforms like Viator or GetYourGuide.</li>
+                    <li><strong>Craft Workshops:</strong> Get hands-on with traditional arts. The <strong>Kyoto Shibori Museum</strong> offers private silk scarf dyeing classes. Book directly. Washi papermaking workshops are also available throughout Kyoto, bookable via experience websites.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-sm">
+                <h4 class="font-bold text-lg mb-2">Outdoor & Adventure</h4>
+                <ul class="list-disc list-inside text-sm space-y-2">
+                    <li><strong>Hiking from Kurama to Kibune (Kyoto):</strong> A beautiful half-day hike connecting two mountain villages via Kurama-dera Temple. This is a self-guided hike, requiring only transport fare.</li>
+                    <li><strong>Cycling in Kyoto:</strong> Rent bicycles to explore the city. Shops like <strong>The Good Day Velo</strong> offer rentals and tours. Expect to pay ~¥1,500-¥2,500 / £8-£13 for a day rental.</li>
+                    <li><strong>Sagano Romantic Train (Kyoto):</strong> A scenic train ride through the Hozugawa River gorge. Tickets are ~¥880 / £4.50 one way. Book in advance at JR ticket offices, especially during peak seasons.</li>
+                </ul>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-sm">
+                <h4 class="font-bold text-lg mb-2">Wellness & Relaxation</h4>
+                <ul class="list-disc list-inside text-sm space-y-2">
+                    <li><strong>Private Onsen Experience:</strong> At <strong>Solaniwa Onsen</strong> in Osaka, book a 90-min private bath for ¥8,800-¥15,400 / £44-£78 (plus main entry fee). Book directly via their website.</li>
+                    <li><strong>Temple Lodging (Shukubo):</strong> An overnight stay at a temple on <strong>Mount Koya</strong> offers a spiritual retreat. Prices vary by temple but expect ~¥15,000-¥25,000 / £75-£125 per person, including two vegetarian meals. Book via platforms like Japanese Guest Houses or Booking.com.</li>
+                </ul>
+            </div>
+        `,
+        accommodations: {
+            osaka: `
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <h3 class="text-xl font-bold text-[#8C6D46] mb-4">Osaka Hotel & Serviced Apartment Options</h3>
+                    <p class="text-sm mb-4">Osaka offers excellent value, with many modern, well-located properties. The Namba and Umeda areas are prime choices for convenience. Prices are estimates for a 2-person room, mid-Oct to mid-Nov 2025.</p>
+                </div>
+                <table class="w-full text-sm text-left mt-4 border-collapse">
+                    <thead class="text-xs text-[#8C6D46] uppercase bg-[#F5F1EB]">
+                        <tr>
+                            <th scope="col" class="px-4 py-3">Hotel Name</th>
+                            <th scope="col" class="px-4 py-3">Location</th>
+                            <th scope="col" class="px-4 py-3">Room Type</th>
+                            <th scope="col" class="px-4 py-3">Price (JPY)</th>
+                            <th scope="col" class="px-4 py-3">Price (GBP)</th>
+                            <th scope="col" class="px-4 py-3">Key Features</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b"><td colspan="6" class="px-4 py-2 font-bold bg-gray-100">Hotels</td></tr>
+                        <tr class="border-b">
+                            <td class="px-4 py-2 font-medium">HOTEL THE FLAG Shinsaibashi</td>
+                            <td class="px-4 py-2">Shinsaibashi</td>
+                            <td class="px-4 py-2">Standard Double</td>
+                            <td class="px-4 py-2">¥22,000-35,000</td>
+                            <td class="px-4 py-2">£110-175</td>
+                            <td class="px-4 py-2">9.3 Wonderful. Stylish design, great breakfast, central for nightlife.</td>
+                        </tr>
+                        <tr class="border-b bg-gray-50">
+                            <td class="px-4 py-2 font-medium">Cross Hotel Osaka</td>
+                            <td class="px-4 py-2">Dotonbori</td>
+                            <td class="px-4 py-2">Standard Double/Twin</td>
+                            <td class="px-4 py-2">¥20,000-35,000</td>
+                            <td class="px-4 py-2">£100-175</td>
+                            <td class="px-4 py-2">8.9 Excellent. Steps from Glico Man sign, modern rooms, great location.</td>
+                        </tr>
+                        <tr class="border-b">
+                            <td class="px-4 py-2 font-medium">Hotel Intergate Osaka Umeda</td>
+                            <td class="px-4 py-2">Umeda</td>
+                            <td class="px-4 py-2">Standard Double/Twin</td>
+                            <td class="px-4 py-2">¥18,000-28,000</td>
+                            <td class="px-4 py-2">£90-140</td>
+                            <td class="px-4 py-2">8.7 Excellent. Communal lounge with free coffee/tea, large public bath.</td>
+                        </tr>
+                         <tr class="border-b bg-gray-50">
+                            <td class="px-4 py-2 font-medium">Dormy Inn Premium Namba</td>
+                            <td class="px-4 py-2">Namba</td>
+                            <td class="px-4 py-2">Double Room</td>
+                            <td class="px-4 py-2">¥16,000-25,000</td>
+                            <td class="px-4 py-2">£80-125</td>
+                            <td class="px-4 py-2">8.9 Excellent. Natural onsen, free nightly ramen service, fantastic value.</td>
+                        </tr>
+                        <tr class="border-b"><td colspan="6" class="px-4 py-2 font-bold bg-gray-100">Serviced Apartments</td></tr>
+                        <tr class="border-b">
+                            <td class="px-4 py-2 font-medium">Mimaru Osaka Namba Station</td>
+                            <td class="px-4 py-2">Namba</td>
+                            <td class="px-4 py-2">Japanese Style Apt</td>
+                            <td class="px-4 py-2">¥25,000-38,000</td>
+                            <td class="px-4 py-2">£125-190</td>
+                            <td class="px-4 py-2">9.6 Exceptional. Opened 2022. Kitchenette, spacious, great for longer stays.</td>
+                        </tr>
+                        <tr class="border-b bg-gray-50">
+                            <td class="px-4 py-2 font-medium">Citadines Namba Osaka</td>
+                            <td class="px-4 py-2">Namba</td>
+                            <td class="px-4 py-2">Studio Twin</td>
+                            <td class="px-4 py-2">¥18,000-30,000</td>
+                            <td class="px-4 py-2">£90-150</td>
+                            <td class="px-4 py-2">9.1 Wonderful. Kitchenette, 24h gym, connected to Takashimaya Dept. Store.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `,
+            kyoto: `
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <h3 class="text-xl font-bold text-[#8C6D46] mb-4">Kyoto Hotel & Serviced Apartment Options</h3>
+                    <p class="text-sm mb-4">Kyoto's accommodations often blend traditional aesthetics with modern comfort. Locations in Gion/Higashiyama offer charm, while those near Kyoto Station provide convenience.</p>
+                </div>
+                <table class="w-full text-sm text-left mt-4 border-collapse">
+                    <thead class="text-xs text-[#8C6D46] uppercase bg-[#F5F1EB]">
+                        <tr>
+                            <th scope="col" class="px-4 py-3">Hotel Name</th>
+                            <th scope="col" class="px-4 py-3">Location</th>
+                            <th scope="col" class="px-4 py-3">Room Type</th>
+                            <th scope="col" class="px-4 py-3">Price (JPY)</th>
+                            <th scope="col" class="px-4 py-3">Price (GBP)</th>
+                            <th scope="col" class="px-4 py-3">Key Features</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b"><td colspan="6" class="px-4 py-2 font-bold bg-gray-100">Hotels</td></tr>
+                        <tr class="border-b">
+                            <td class="px-4 py-2 font-medium">Cross Hotel Kyoto</td>
+                            <td class="px-4 py-2">Kawaramachi</td>
+                            <td class="px-4 py-2">Standard Double</td>
+                            <td class="px-4 py-2">¥25,000-40,000</td>
+                            <td class="px-4 py-2">£125-200</td>
+                            <td class="px-4 py-2">9.2 Wonderful. Stylish, excellent location for dining and shopping.</td>
+                        </tr>
+                        <tr class="border-b bg-gray-50">
+                            <td class="px-4 py-2 font-medium">The Blossom Kyoto</td>
+                            <td class="px-4 py-2">Gojo</td>
+                            <td class="px-4 py-2">Standard Double/Twin</td>
+                            <td class="px-4 py-2">¥20,000-35,000</td>
+                            <td class="px-4 py-2">£100-175</td>
+                            <td class="px-4 py-2">9.3 Wonderful. Opened 2022. Large onsen bath, stylish, walkable to Gion.</td>
+                        </tr>
+                        <tr class="border-b">
+                            <td class="px-4 py-2 font-medium">Ace Hotel Kyoto</td>
+                            <td class="px-4 py-2">Karasuma Oike</td>
+                            <td class="px-4 py-2">Standard King</td>
+                            <td class="px-4 py-2">¥30,000-50,000</td>
+                            <td class="px-4 py-2">£150-250</td>
+                            <td class="px-4 py-2">Opened 2020. Trendy design, rooftop bar, Stumptown Coffee, direct subway access.</td>
+                        </tr>
+                         <tr class="border-b bg-gray-50">
+                            <td class="px-4 py-2 font-medium">Onyado Nono Kyoto Shichijo</td>
+                            <td class="px-4 py-2">Kyoto Station</td>
+                            <td class="px-4 py-2">Double Room</td>
+                            <td class="px-4 py-2">¥20,000-35,000</td>
+                            <td class="px-4 py-2">£100-175</td>
+                            <td class="px-4 py-2">9.1 Wonderful. Natural onsen, tatami floors throughout, free ramen service.</td>
+                        </tr>
+                        <tr class="border-b"><td colspan="6" class="px-4 py-2 font-bold bg-gray-100">Serviced Apartments</td></tr>
+                        <tr class="border-b">
+                            <td class="px-4 py-2 font-medium">Mimaru Suites Kyoto Central</td>
+                            <td class="px-4 py-2">Central Kyoto</td>
+                            <td class="px-4 py-2">2-Bedroom Suite</td>
+                            <td class="px-4 py-2">¥30,000-50,000</td>
+                            <td class="px-4 py-2">£150-250</td>
+                            <td class="px-4 py-2">9.2 Exceptional. Kitchen, washer, spacious, great for comfort.</td>
+                        </tr>
+                        <tr class="border-b bg-gray-50">
+                            <td class="px-4 py-2 font-medium">KOKO HOTEL Residence Nijo Castle</td>
+                            <td class="px-4 py-2">Central Kyoto</td>
+                            <td class="px-4 py-2">Apartment</td>
+                            <td class="px-4 py-2">¥25,000-38,000</td>
+                            <td class="px-4 py-2">£125-190</td>
+                            <td class="px-4 py-2">9.8 Exceptional. Beautiful property near Nijo Castle with kitchen facilities.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `
+        },
+        budgeting: `
+            <h4 class="text-xl font-semibold mb-2">Accommodation Savings</h4>
+            <ul class="list-disc list-inside mb-4">
+                <li><strong>Business Hotels:</strong> These offer clean, private, no-frills rooms at a great value. Chains like APA Hotel or Dormy Inn are excellent choices.</li>
+                <li><strong>Guesthouses & Hostels:</strong> Many offer private rooms (often with shared bathrooms) at prices lower than hotels. They are also great for getting local tips from staff.</li>
+                <li><strong>Stay Outside the Center:</strong> Accommodations a few subway stops away from major hubs like Kyoto Station or Umeda can be significantly cheaper.</li>
+            </ul>
+            <h4 class="text-xl font-semibold mb-2">Food & Drink on a Budget</h4>
+            <ul class="list-disc list-inside mb-4">
+                <li><strong>Embrace Convenience Stores (Konbini):</strong> Japanese convenience stores (7-Eleven, Family Mart, Lawson) offer surprisingly high-quality and delicious meals, from onigiri (rice balls) to bento boxes and hot noodles, for a fraction of restaurant prices.</li>
+                <li><strong>Lunch Deals (Teishoku):</strong> Many restaurants offer set lunch menus (teishoku) for around ¥1,000-¥1,500, which is a great way to try excellent food for less.</li>
+                <li><strong>Visit Depachika:</strong> The basement food halls of department stores offer an amazing array of food. Visit near closing time for significant discounts on pre-made meals.</li>
+            </ul>
+            <h4 class="text-xl font-semibold mb-2">Free & Low-Cost Activities</h4>
+            <ul class="list-disc list-inside">
+                <li><strong>Explore Parks & Shrines:</strong> Many shrines (like Fushimi Inari) and parks are free to enter.</li>
+                <li><strong>Window Shopping:</strong> Wander through fascinating shopping arcades and trendy neighborhoods.</li>
+                <li><strong>Walk the City:</strong> Both Osaka and Kyoto are fantastic walking cities. Discover hidden alleys, temples, and shops simply by exploring on foot.</li>
+            </ul>
+        `
+    };
+
+    function navigate(hash) {
+        navLinks.forEach(link => {
+            link.classList.toggle('active', link.getAttribute('href') === hash);
+        });
+        contentSections.forEach(section => {
+            section.classList.toggle('active', '#' + section.id === hash);
+        });
+    }
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.getAttribute('href');
+            window.location.hash = targetId;
+        });
+    });
+
+    window.addEventListener('hashchange', () => {
+        const hash = window.location.hash || '#overview';
+        navigate(hash);
+    });
+
+    let budgetChart;
+    function updateBudgetChart(totalBudget) {
+        const ctx = document.getElementById('budgetChart').getContext('2d');
+        const budgetData = {
+            accommodation: totalBudget * 0.35,
+            food: totalBudget * 0.25,
+            activities: totalBudget * 0.15,
+            transport: totalBudget * 0.15,
+            shopping: totalBudget * 0.10,
+        };
+
+        if (budgetChart) {
+            budgetChart.destroy();
+        }
+
+        budgetChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Accommodation', 'Food & Drink', 'Activities', 'Local Transport', 'Shopping'],
+                datasets: [{
+                    data: Object.values(budgetData),
+                    backgroundColor: ['#8C6D46', '#B0926A', '#D2B48C', '#EAE3D9', '#F5F1EB'],
+                    borderColor: '#FDFBF8',
+                    borderWidth: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { family: 'Inter' } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed !== null) {
+                                    label += new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(context.parsed);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    budgetSlider.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        budgetValue.textContent = `¥${value.toLocaleString()}`;
+        updateBudgetChart(value);
+    });
+
+    function displayEvents(season) {
+        const seasonData = data.seasonalEvents[season];
+        let html = `<h5 class="font-bold text-lg mb-3 text-[#8C6D46]">${seasonData.title}</h5>`;
+        html += '<div class="space-y-3">';
+        seasonData.events.forEach(event => {
+            html += `
+                <div class="text-sm">
+                    <p class="font-semibold">${event.city}: ${event.name}</p>
+                    <p class="text-xs text-gray-600">${event.desc}</p>
+                </div>
+            `;
+        });
+        html += '</div>';
+        eventDisplay.innerHTML = html;
+        seasonButtons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.season === season);
+            btn.style.backgroundColor = btn.dataset.season === season ? '#EAE3D9' : 'transparent';
+            btn.style.color = btn.dataset.season === season ? '#8C6D46' : '#4A4A4A';
+        });
+    }
+
+    seasonButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            displayEvents(button.dataset.season);
+        });
+    });
+    
+    function setupTabs(containerId, dataObject) {
+        const container = document.getElementById(containerId);
+        const contentDiv = document.getElementById(`${containerId}-content`);
+        const tabs = container.querySelectorAll('.tab-button');
+        
+        function loadTabContent(target) {
+            contentDiv.innerHTML = dataObject[target];
+        }
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const targetKey = tab.dataset.target.split('-')[1];
+                if (containerId === 'accommodations') {
+                     contentDiv.innerHTML = dataObject[tab.dataset.target.split('-')[1]];
+                } else {
+                     contentDiv.innerHTML = dataObject[targetKey];
+                }
+            });
+        });
+
+        const initialTarget = tabs[0].dataset.target.split('-')[1];
+         if (containerId === 'accommodations') {
+            contentDiv.innerHTML = dataObject[initialTarget];
+        } else {
+            contentDiv.innerHTML = dataObject[initialTarget];
+        }
+    }
+
+    function loadDayTrips() {
+        const container = document.getElementById('day-trips-content');
+        let html = '';
+        data.dayTrips.forEach(trip => {
+            html += `
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h4 class="font-bold text-lg mb-2">${trip.name}</h4>
+                    <p class="text-sm mb-3">${trip.desc}</p>
+                    <div class="text-xs space-y-1 text-gray-600">
+                        <p><strong>From:</strong> ${trip.from}</p>
+                        <p><strong>Time:</strong> ${trip.time}</p>
+                        <p><strong>Cost:</strong> ${trip.cost}</p>
+                    </div>
+                    <p class="text-xs mt-3 bg-[#F5F1EB] text-[#8C6D46] p-2 rounded-md"><strong>Perfect for couples who enjoy:</strong> ${trip.ideal}</p>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function loadItinerary() {
+        const container = document.getElementById('itinerary-content');
+        let html = '';
+        data.itinerary.forEach(day => {
+            html += `
+            <div class="bg-white p-6 rounded-xl shadow-sm">
+                <h3 class="text-xl font-bold text-[#8C6D46] mb-4">Day ${day.day}: ${day.title} <span class="text-sm font-normal text-gray-500 ml-2">(Base: ${day.base})</span></h3>
+                <div class="timeline">
+                    <div class="timeline-item relative pb-4">
+                        <h4 class="font-semibold">Morning</h4>
+                        <p class="text-sm">${day.morning}</p>
+                    </div>
+                    <div class="timeline-item relative pb-4">
+                        <h4 class="font-semibold">Afternoon</h4>
+                        <p class="text-sm">${day.afternoon}</p>
+                    </div>
+                    <div class="timeline-item relative">
+                        <h4 class="font-semibold">Evening</h4>
+                        <p class="text-sm">${day.evening}</p>
+                    </div>
+                </div>
+            </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+    
+    let passChart;
+    function updatePassChart(style) {
+        const ctx = document.getElementById('pass-chart').getContext('2d');
+        let chartData, recommendation;
+
+        if (style === 'city-focused') {
+            chartData = {
+                labels: ['IC Card', 'Kansai Thru Pass + City Passes'],
+                datasets: [{ data: [12000, 11000], backgroundColor: ['#D2B48C', '#8C6D46'] }]
+            };
+            recommendation = "<strong>Recommendation:</strong> For a trip focused mainly within Osaka and Kyoto, a combination of the <strong>Kansai Thru Pass</strong> (for flexible travel days between cities) and city-specific passes like the <strong>Osaka Amazing Pass</strong> and <strong>Kyoto Bus Pass</strong> often provides the best value.";
+        } else if (style === 'many-day-trips') {
+            chartData = {
+                labels: ['IC Card', 'JR Kansai Area Pass', 'Kansai Thru Pass'],
+                datasets: [{ data: [22000, 16500, 18000], backgroundColor: ['#D2B48C', '#8C6D46', '#B0926A'] }]
+            };
+            recommendation = "<strong>Recommendation:</strong> If you plan many day trips to JR-accessible locations like Himeji and Nara, the <strong>JR Kansai Area Pass</strong> is likely your most economical choice. The Kansai Thru Pass is better if your trips use more private railways.";
+        } else {
+            chartData = {
+                labels: ['Point-to-Point Tickets', 'JR Pass (7-Day)'],
+                datasets: [{ data: [65000, 50000], backgroundColor: ['#D2B48C', '#8C6D46'] }]
+            };
+            recommendation = "<strong>Recommendation:</strong> If your 2-week trip includes travel to Tokyo or other regions, a <strong>7-Day Japan Rail Pass</strong> used strategically for your long-distance travel week is almost always the best value. Use an IC card for city travel on other days.";
+        }
+
+        if (passChart) { passChart.destroy(); }
+
+        passChart = new Chart(ctx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` Est. Cost: ${new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(c.parsed.x)}` } } },
+                scales: { x: { beginAtZero: true, ticks: { callback: (v) => `¥${v/1000}k` } } }
+            }
+        });
+        
+        document.getElementById('pass-recommendation').innerHTML = recommendation;
+    }
+    
+    travelStyleSelector.addEventListener('change', (e) => updatePassChart(e.target.value));
+
+    // Initial Load
+    const initialHash = window.location.hash || '#overview';
+    navigate(initialHash);
+    updateBudgetChart(700000);
+    displayEvents('autumn');
+    loadItinerary();
+    setupTabs('osaka', data.osaka);
+    setupTabs('kyoto', data.kyoto);
+    loadDayTrips();
+    document.getElementById('experiences-content').innerHTML = data.experiences;
+    setupTabs('accommodations', data.accommodations);
+    document.getElementById('budgeting-content').innerHTML = data.budgeting;
+    updatePassChart('many-day-trips');
+});
+</script>
+</body>
+</html>
 
