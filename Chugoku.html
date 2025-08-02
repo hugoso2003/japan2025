@@ -1,1 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Interactive Guide: The Chugoku Region</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals with Deep Teal Accent -->
+    <!-- Application Structure Plan: The application is structured as a single-page, multi-section dashboard. A sticky top navigation allows users to jump to key sections: 'Experiences', 'Accommodations', 'Cuisine', and a new 'Travel' section. The 'Experiences' section is the core, using a tab-like button system to filter activities by prefecture. Each activity is presented in a detailed card with a modal popup for even more granular information. The 'Accommodations' section features a new, highly-curated list of top-rated, unique stays. The 'Cuisine' section has prefecture-based filters and detailed cards with local restaurant suggestions. The new 'Travel' section provides a comprehensive overview of regional transportation. This structure was chosen to transform the dense research into a layered, user-driven tool, prioritizing discoverability, detailed planning, and practical logistics. -->
+    <!-- Visualization & Content Choices: 
+        1. Report Info: Detailed activity information. Goal: Organize & Inform with depth. Viz/Method: Interactive cards with a "Details" button triggering a modal window (HTML/Tailwind/JS). Interaction: Users click a prefecture filter to see relevant activity cards, then a button to open a detailed modal. Justification: This two-step process manages complexity, providing an overview and an in-depth view on demand.
+        2. Report Info: Accommodation listings. Goal: Compare & Filter. Viz/Method: Dropdown filters for prefecture/type, dynamic content cards, and a summary bar chart. Interaction: Filters update the list and the chart. Justification: Provides a multi-faceted tool for users to find and compare high-quality stays that meet their criteria.
+        3. Report Info: Cuisine by prefecture. Goal: Organize. Viz/Method: Tab-based card display with detailed content. Interaction: Clicking a prefecture button shows relevant food items with full details and restaurant recommendations. Justification: This expands the previous simple list into a rich, informative section for culinary planning.
+        4. Report Info: Regional transportation. Goal: Inform & Plan. Viz/Method: Simple HTML sections with lists and text. Interaction: N/A. Justification: This complex information is best presented clearly and concisely without visualization to ensure easy comprehension.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 45vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .nav-link.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+        .filter-button.active {
+            background-color: #007bff;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .content-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .content-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .modal-overlay {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/90 backdrop-blur-lg shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">Chugoku Region: An Interactive Guide</h1>
+                </div>
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#experiences" class="nav-link text-base font-medium text-slate-600 hover:text-blue-600 border-b-2 border-transparent hover:border-blue-500 transition-colors">Experiences</a>
+                    <a href="#accommodations" class="nav-link text-base font-medium text-slate-600 hover:text-blue-600 border-b-2 border-transparent hover:border-blue-500 transition-colors">Accommodations</a>
+                    <a href="#cuisine" class="nav-link text-base font-medium text-slate-600 hover:text-blue-600 border-b-2 border-transparent hover:border-blue-500 transition-colors">Cuisine</a>
+                    <a href="#travel" class="nav-link text-base font-medium text-slate-600 hover:text-blue-600 border-b-2 border-transparent hover:border-blue-500 transition-colors">Travel</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section id="hero" class="py-16 sm:py-20 bg-blue-50">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-blue-800 tracking-tight">Your Definitive Guide to Western Honshu</h2>
+                <p class="mt-4 text-lg text-slate-600">
+                    Dive deep into the Chugoku region with this comprehensive, interactive guide. From the rich heritage of Yamaguchi (山口縣) to the art islands of the Seto Inland Sea, plan your perfect journey with detailed insights into activities, stays, and local flavors.
+                </p>
+            </div>
+        </section>
+
+        <section id="experiences" class="py-16 sm:py-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-slate-800">Plan Your Experiences</h2>
+                    <p class="mt-3 max-w-3xl mx-auto text-slate-500">
+                        The Chugoku region is brimming with unique activities. Whether you're interested in ancient crafts, sacred hikes, or modern art, there's an adventure waiting. Select a prefecture to discover its signature experiences and click 'Details' for comprehensive planning information.
+                    </p>
+                </div>
+                <div id="experience-filters" class="flex justify-center flex-wrap gap-3 sm:gap-4 mb-10">
+                </div>
+                <div id="experiences-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                </div>
+            </div>
+        </section>
+
+        <section id="accommodations" class="py-16 sm:py-20 bg-slate-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-slate-800">Find Your Perfect Stay</h2>
+                    <p class="mt-3 max-w-2xl mx-auto text-slate-500">
+                        We have curated a list of highly-rated, unique hotels and serviced apartments in the Chugoku region. Use the filters to find a stay that matches your travel style and budget. The chart provides a visual summary of the options listed in this guide.
+                    </p>
+                </div>
+                <div class="flex flex-col md:flex-row justify-center items-center gap-4 mb-8 p-4 bg-white rounded-lg shadow-sm">
+                    <div class="w-full md:w-auto">
+                        <label for="filter-prefecture" class="block text-sm font-medium text-slate-700">Prefecture:</label>
+                        <select id="filter-prefecture" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        </select>
+                    </div>
+                    <div class="w-full md:w-auto">
+                        <label for="filter-type" class="block text-sm font-medium text-slate-700">Accommodation Type:</label>
+                        <select id="filter-type" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        </select>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-md mb-12">
+                    <h3 class="font-semibold text-lg mb-4 text-center text-slate-700">Accommodation Options by Prefecture</h3>
+                    <div class="chart-container">
+                        <canvas id="accommodationChart"></canvas>
+                    </div>
+                </div>
+                <div id="accommodations-list" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                </div>
+            </div>
+        </section>
+        
+        <section id="cuisine" class="py-16 sm:py-20">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-slate-800">A Taste of Chugoku</h2>
+                    <p class="mt-3 max-w-2xl mx-auto text-slate-500">
+                        The region's cuisine is as diverse as its landscape. Discover the must-try local specialties and popular restaurants, from Hiroshima's famous okonomiyaki to Shimonoseki's legendary fugu. Select a prefecture to explore its culinary delights.
+                    </p>
+                </div>
+                <div id="cuisine-filters" class="flex justify-center flex-wrap gap-3 sm:gap-4 mb-10">
+                </div>
+                <div id="cuisine-grid" class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                </div>
+            </div>
+        </section>
+
+        <section id="travel" class="py-16 sm:py-20 bg-slate-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl font-bold text-slate-800">Getting Around the Chugoku Region</h2>
+                    <p class="mt-3 max-w-2xl mx-auto text-slate-500">
+                        The Chugoku region is well-connected by a variety of transport options. Here is a guide to help you choose the best way to travel between cities and prefectures.
+                    </p>
+                </div>
+                <div class="space-y-12">
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="font-bold text-xl text-blue-700 mb-4">JR Rail Passes</h3>
+                        <p class="text-slate-600 mb-4">For unlimited travel on most JR train lines and ferries, a regional pass is often the most economical choice for foreign visitors. These passes can save you a significant amount of money if you plan to travel between prefectures.</p>
+                        <ul class="list-disc list-inside text-slate-600 space-y-2">
+                            <li><strong>JR West All Area Pass:</strong> Offers seven consecutive days of unlimited travel on JR trains (including shinkansen), limited express trains, and local lines in the Kansai, Chugoku, and Hokuriku regions. It also covers the JR ferry to Miyajima.</li>
+                            <li><strong>Kansai-Hiroshima Area Pass:</strong> A five-day pass that allows unlimited travel between Kansai and Hiroshima, including the Sanyo Shinkansen. It's a great option if you are flying into Osaka and heading west.</li>
+                            <li><strong>Setouchi Area Pass:</strong> A seven-day pass that covers the wider Setouchi region, including train and ferry travel to the art islands of Kagawa and Ehime.</li>
+                            <li><strong>Booking Tip:</strong> You can make free seat reservations with these passes, which is highly recommended for popular routes.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="font-bold text-xl text-blue-700 mb-4">IC Cards: ICOCA</h3>
+                        <p class="text-slate-600 mb-4">The ICOCA card is a rechargeable IC card used on the JR West rail network. It is a convenient way to pay for public transport without buying individual tickets. The card works on most JR lines, subways, and local buses across the region and is also compatible with other major IC cards (Suica, PASMO) nationwide.</p>
+                        <ul class="list-disc list-inside text-slate-600 space-y-2">
+                            <li><strong>Where to Buy:</strong> Purchase at JR stations or Kansai International Airport. The card costs ¥2,000, which includes a ¥500 deposit.</li>
+                            <li><strong>Where it Works:</strong> Usable on JR lines, local buses, and trams in Okayama, Hiroshima, and parts of the San'in region. It can also be used for small purchases at convenience stores.</li>
+                            <li><strong>Important Note:</strong> ICOCA cannot be used on Shinkansen trains, and there are sometimes distance limits for a single journey on local lines.</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="font-bold text-xl text-blue-700 mb-4">Local Transportation</h3>
+                        <ul class="list-disc list-inside text-slate-600 space-y-2">
+                            <li><strong>Hiroshima:</strong> The city's streetcars (trams) are an efficient way to get around. Tram line 2 connects the city center to Miyajimaguchi, the ferry terminal for Miyajima Island.</li>
+                            <li><strong>Okayama:</strong> The city is a major railway intersection. The Okayama Electric Tramway (Okaden) operates two main lines from Okayama Station, providing easy access to key areas.</li>
+                            <li><strong>Hagi (Yamaguchi):</strong> The flat terrain is perfect for cycling. The Hagi City Circular Hop-on Bus offers a convenient and affordable way to visit major tourist sites.</li>
+                            <li><strong>Matsue (Shimane):</strong> The Lake Line bus runs a circular route, stopping at all major attractions around the city. An all-day ticket is a great value.</li>
+                            <li><strong>Tottori:</strong> The Loop Kirinjishi Bus is a great option for reaching the famous Tottori Sand Dunes on weekends and holidays.</li>
+                            <li><strong>Ferries:</strong> Essential for reaching islands like Miyajima and the art islands in the Seto Inland Sea. JR and Matsudai ferries serve Miyajima. An extensive ferry network connects Okayama and Kagawa to the art islands of Naoshima, Teshima, and Inujima.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-800 text-slate-400 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center">
+            <p>&copy; 2025 Chugoku Interactive Travel Guide. Information compiled from comprehensive research.</p>
+        </div>
+    </footer>
+
+    <div id="activity-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform scale-95">
+            <div class="sticky top-0 bg-white p-4 border-b flex justify-between items-center">
+                <h3 id="modal-title" class="text-xl font-bold text-slate-800"></h3>
+                <button id="modal-close" class="text-slate-500 hover:text-slate-800">&times;</button>
+            </div>
+            <div id="modal-body" class="p-6">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const appData = {
+            prefectures: [
+                { name: 'Yamaguchi', traditional: '山口縣' },
+                { name: 'Hiroshima', traditional: '廣島縣' },
+                { name: 'Okayama', traditional: '岡山縣' },
+                { name: 'Tottori', traditional: '鳥取縣' },
+                { name: 'Shimane', traditional: '島根縣' },
+                { name: 'Ehime', traditional: '愛媛縣' },
+                { name: 'Kagawa', traditional: '香川縣' },
+            ],
+            experiences: [
+                {
+                    id: 'hagi_pottery',
+                    prefecture: 'Yamaguchi',
+                    name: 'Hagi Ware Pottery',
+                    shortDesc: 'Engage with a 400-year-old craft prized in the Japanese tea ceremony.',
+                    details: {
+                        background: 'Hagi ware (Hagiyaki) is a traditional craft with over 400 years of history, highly valued for its subtle form and subdued hues. It is known for its unique texture and how it develops character with use, making it a favorite for the tea ceremony.',
+                        options: [
+                            '<strong>Pottery Making:</strong> Choose between drawing on Hagi yaki pottery or using an electric potter\'s wheel.',
+                            '<strong>Other Crafts:</strong> Try Hagi Glass making (glass-blowing, sand-blasting, jewelry-making), Kimono wearing, Rickshaw rides, or Sightseeing Boat tours.'
+                        ],
+                        price: 'Pottery sessions range from ¥2,000 to ¥3,500. Multi-day workshops are available (e.g., 3-day for ¥150,000). Shipping costs for finished pieces are extra.',
+                        openingHours: 'Most workshops operate from 9:00 AM to 5:30 PM. Appointments are generally required, but some allow same-day bookings.',
+                        transportation: 'Hagi is ideal for cycling. The Hagi City Circular Hop-on Bus (¥100/ride, ¥500/day pass) connects major spots. Taxis and sightseeing taxis are also available.'
+                    }
+                },
+                {
+                    id: 'saijo_sake',
+                    prefecture: 'Hiroshima',
+                    name: 'Saijo Sake Brewery Tour',
+                    shortDesc: 'Explore one of Japan\'s leading "sake capitals" and taste its mellow, rich flavors.',
+                    details: {
+                        background: 'Saijo is famous for its unique "soft water brewing method," which produces a "mellow sake" with a soft, rich, and umami flavor. The town\'s "Sake Brewery Street" is picturesque with red chimneys and white-walled breweries.',
+                        options: [
+                            '<strong>Guided Tours:</strong> Approx. 2-hour tours visit multiple breweries with an English-speaking guide and include sake sampling.',
+                            '<strong>Self-Guided Visits:</strong> Many breweries are open on weekends for independent exploration.',
+                            '<strong>Sake Festival:</strong> A massive festival held every October, featuring ~1,000 sake brands and local food.'
+                        ],
+                        price: 'Guided tours cost around $52. A 1.5-day brewing experience with a master brewer is also available for ¥40,000 (as of Nov 2024).',
+                        openingHours: 'Guided tours are on specific days and require booking. The Sake Festival is an annual event in October.',
+                        transportation: 'Saijo Station is the central hub, with many breweries located within easy walking distance.'
+                    }
+                },
+                {
+                    id: 'kurashiki_kimono',
+                    prefecture: 'Okayama',
+                    name: 'Kurashiki Kimono Rental',
+                    shortDesc: 'Immerse yourself in the traditional ambiance of the Kurashiki Bikan Historical Quarter.',
+                    details: {
+                        background: 'Wearing a kimono offers a unique way to connect with the cultural heritage of historic Japanese districts. The Kurashiki Bikan Historical Quarter, with its picturesque canals, is a perfect backdrop.',
+                        options: [
+                            '<strong>Basic Rental:</strong> Includes kimono and dressing service.',
+                            '<strong>Add-ons:</strong> Hair styling, accessory rentals, professional photography services, and a "next day return" plan are available.',
+                            '<strong>For Families:</strong> Children\'s kimonos are also available for rent.'
+                        ],
+                        price: 'Basic rental is around ¥3,980. Additional services like next-day return (¥2,200) or professional photography (¥30,800) cost extra.',
+                        openingHours: 'Shops like Kimono Rental VASARA operate from 9:00 AM to 6:00 PM year-round. Same-day reservations may be possible.',
+                        transportation: 'Rental shops are typically within walking distance of major stations, like an 18-minute walk from JR Kurashiki Station.'
+                    }
+                },
+                {
+                    id: 'daisen_hiking',
+                    prefecture: 'Tottori',
+                    name: 'Mount Daisen Hiking',
+                    shortDesc: 'Hike the highest peak in the Chugoku region, often called "Hoki Fuji," for stunning views.',
+                    details: {
+                        background: 'Mt. Daisen (1,709m) is the highest peak in the region and is celebrated for its seasonal beauty. It offers pristine forests and rich natural environments with fewer crowds than Mt. Fuji. Note: The highest peak is currently unstable and access is forbidden.',
+                        options: [
+                            '<strong>Self-Guided Hiking:</strong> An extensive network of trails is available. Basic maps can be found at the Daisen Information Center.',
+                            '<strong>Guided Tours:</strong> Options include a "Nature course" (2.5 hrs, ¥3,000), "History course" (2.5 hrs, ¥3,000), and a "Full course" (3.5 hrs, ¥5,000).'
+                        ],
+                        price: 'Guided tours range from ¥3,000 to ¥5,000 per person, typically including guide fees, insurance, and a temple donation.',
+                        openingHours: 'The main climbing season is April through November. The "Natsuyama Hiking Course" is popular in summer.',
+                        transportation: 'Accessible by bus from Yonago Station (approx. 5 times a day). A loop bus runs on weekends and holidays during peak season.'
+                    }
+                },
+                {
+                    id: 'uradome_kayaking',
+                    prefecture: 'Tottori',
+                    name: 'Uradome Coast Kayaking',
+                    shortDesc: 'Explore a stunning coastline with dramatic cliffs, caves, and exceptionally clear waters.',
+                    details: {
+                        background: 'Part of the San\'in Kaigan Geopark, the Uradome Coast is a rias coastline renowned for having some of the clearest water in Honshu, making it ideal for marine sports.',
+                        options: [
+                            '<strong>Kayak Types:</strong> Standard sea kayaks and "Clear Kayaks" are available for an unobstructed underwater view.',
+                            '<strong>Courses:</strong> Various courses are offered, from the standard Uradome Coast Course to more adventurous options like the Ryujin Cave Attack Course.'
+                        ],
+                        price: 'Courses range from ¥6,600 to ¥9,900 for adults. Rental gear (marine shoes, gloves, etc.) is available for a small fee.',
+                        openingHours: 'Tours typically last 2.5 hours or more. The Nagisa Exchange Center is the base for rentals and tours.',
+                        transportation: 'Accessible by bus from JR Tottori Station (approx. 40 min) or JR Iwami Station (approx. 20 min). A shuttle bus runs from Iwami Station to the exchange center.'
+                    }
+                },
+                {
+                    id: 'misasa_onsen',
+                    prefecture: 'Tottori',
+                    name: 'Misasa Onsen',
+                    shortDesc: 'Soak in historic, radium-rich waters believed to be therapeutic for over 850 years.',
+                    details: {
+                        background: 'Misasa Onsen is famous for its radium-rich waters, believed to be beneficial for health. The name "Misasa" (Three Mornings) suggests health improves after three days of bathing. The town also promotes "forest bathing" for well-being.',
+                        options: [
+                            '<strong>Public Baths:</strong> The most famous is the free, 24/7 mixed-gender Kawara Open-air Bath on the riverbank. Other public baths and footbaths are also available.',
+                            '<strong>Ryokans:</strong> Numerous traditional inns offer their own hot spring facilities, many with private baths available for guests or day-use visitors.'
+                        ],
+                        price: 'The Kawara bath is free. Other public baths are typically under ¥1,000. Ryokan private baths can cost around ¥1,800-¥3,000 for non-guests.',
+                        openingHours: 'The Kawara bath is open 24/7. Other facilities have varying hours.',
+                        transportation: 'The town is highly walkable. It\'s accessible via a 20-minute bus ride from Kurayoshi Station.'
+                    }
+                },
+                {
+                    id: 'tamatsukuri_onsen',
+                    prefecture: 'Shimane',
+                    name: 'Tamatsukuri Onsen',
+                    shortDesc: 'Enjoy the healing and skin-beautifying effects of this prominent hot spring resort.',
+                    details: {
+                        background: 'Located in Matsue, Tamatsukuri Onsen has been known for its healing waters since the 8th century, with a reputation for beautifying the skin.',
+                        options: [
+                            '<strong>Day Use:</strong> Various public and hotel-based bathing options are available for day visitors, including Tamatsukuri Onsen Yuuyu and several hotels.',
+                            '<strong>Private Baths:</strong> Many ryokans in the area offer rooms with private open-air baths or rental private baths for ultimate relaxation.'
+                        ],
+                        price: 'Day-use fees vary, from ¥600 at Tamatsukuri Onsen Yuuyu to ¥1,750 at Hotel Gyokusen.',
+                        openingHours: 'Facilities have varying hours. Tamatsukuri Onsen Yuuyu is open 10 AM - 10 PM (closed Mondays). Others may require confirmation of availability.',
+                        transportation: 'Located about 5 minutes by car from Tamatsukuri Station. Matsue\'s Lake Line bus also connects to the onsen.'
+                    }
+                },
+                 {
+                    id: 'shimanami_kaido',
+                    prefecture: 'Ehime',
+                    name: 'Shimanami Kaido Cycling',
+                    shortDesc: 'Cycle a world-renowned route connecting Honshu and Shikoku with breathtaking views.',
+                    details: {
+                        background: 'The Shimanami Kaido is a 60-kilometer cycling route across six islands in the Seto Inland Sea. It\'s famous for its well-maintained paths and stunning bridge architecture.',
+                        options: [
+                            '<strong>Rental Systems:</strong> A regular, more affordable system with many terminals, and a premium Giant rental system with higher-quality bikes.',
+                            '<strong>Bike Types:</strong> Choose from Cross Bikes, City Cycles, Battery-Assisted Bicycles, and high-performance E-bikes.'
+                        ],
+                        price: 'Regular rentals are ¥3,000/day for adults. E-bikes are ¥8,000/day. Giant rentals range from ¥4,000 to ¥17,000/day. Small bridge tolls (~¥500 total) apply.',
+                        openingHours: 'Terminals are generally open 8:30 AM - 7:00 PM (Mar-Nov) and 8:30 AM - 6:00 PM (Dec-Feb). E-bikes are popular and run out quickly.',
+                        transportation: 'The route connects Onomichi (Hiroshima) and Imabari (Ehime). Ferries are also available to skip certain sections.'
+                    }
+                },
+                {
+                    id: 'art_islands',
+                    prefecture: 'Kagawa',
+                    name: 'Art Island Hopping',
+                    shortDesc: 'Explore contemporary art and architecture on the islands of Naoshima, Teshima, and Inujima.',
+                    details: {
+                        background: 'These islands in the Seto Inland Sea are internationally renowned for their contemporary art museums and installations, many designed by celebrated architect Tadao Ando. They are the centerpiece of the Setouchi Triennale art festival.',
+                        options: [
+                           '<strong>Key Attractions:</strong> Teshima Art Museum, Les Archives du Coeur (Teshima), Inujima Seirensho Art Museum, and the Art House Projects on Naoshima and Inujima.',
+                           '<strong>Setouchi Triennale:</strong> During the festival, additional artworks are displayed and more transportation options are available.'
+                        ],
+                        price: 'Admission fees vary per museum (e.g., Teshima Art Museum ¥2,000, Inujima Seirensho ¥2,300). The Setouchi Triennale Passport covers some, but not all, venues.',
+                        openingHours: 'Generally 10:00 AM - 5:00 PM. Many museums are closed on Mondays or Tuesdays. Check official websites for specific calendars, as hours and closing days can be complex.',
+                        transportation: 'Island hopping relies on an extensive but complex ferry network from Uno Port (Okayama) and Takamatsu Port (Kagawa). Planning routes and checking schedules in advance is essential.'
+                    }
+                }
+            ],
+            accommodations: [
+                {
+                    name: 'Iwaso',
+                    prefecture: 'Hiroshima',
+                    type: 'Ryokan',
+                    price: '£250 - £500+',
+                    desc: 'A historic and authentic ryokan situated on the serene Miyajima Island, offering traditional Japanese hospitality. Renowned for its exceptional service and exquisite multi-course "Kaiseki" meals.',
+                    rating: '9.2/10 (Superb)',
+                    starRating: null,
+                    uniqueFeatures: ['Historic location on Miyajima Island', 'Exceptional "kaiseki" dining', 'Indoor and outdoor hot spring baths (onsen)', 'Traditional Japanese-style rooms'],
+                    reviewKeywords: ['Authentic', 'traditional', 'amazing food', 'great onsen', 'exceptional service', 'beautiful property'],
+                    bookingLink: 'https://www.booking.com/hotel/jp/iwaso.en-gb.html'
+                },
+                {
+                    name: 'GRAND BASE Peace Park',
+                    prefecture: 'Hiroshima',
+                    type: 'Serviced Apartment',
+                    price: '£80 - £160',
+                    desc: 'A modern and spacious serviced apartment hotel ideal for families, featuring kitchenettes and washing machines. Located just a short walk from Peace Memorial Park, it provides a functional and comfortable base.',
+                    rating: '9.3/10 (Superb)',
+                    starRating: 4,
+                    uniqueFeatures: ['Spacious rooms with kitchenettes', 'In-room washing and drying machines', 'Contactless check-in for convenience', 'Excellent value for money'],
+                    reviewKeywords: ['Very clean', 'spacious', 'modern', 'great location', 'washing machine', 'ideal for families'],
+                    bookingLink: 'https://www.booking.com/hotel/jp/grand-base-hiroshima-peace-memorial-park.en-gb.html'
+                },
+                {
+                    name: 'Itsukushima Iroha',
+                    prefecture: 'Hiroshima',
+                    type: 'Ryokan',
+                    price: '£230+',
+                    desc: 'A modern boutique ryokan on Miyajima Island that blends traditional Japanese aesthetics with contemporary comfort. Features include a rooftop public bath and complimentary evening wine.',
+                    rating: '9.5/10 (Superb)',
+                    starRating: 4,
+                    uniqueFeatures: ['Rooftop public bath with views', 'Free wine and snacks in the evening lounge', 'Spacious and comfortable rooms', 'Excellent communication from staff'],
+                    reviewKeywords: ['Exceptional', 'spacious', 'comfortable bed', 'rooftop bath', 'perfect location'],
+                    bookingLink: 'https://www.agoda.com/en-gb/kurayado-iroha-ryokan/hotel/hiroshima-jp.html'
+                },
+                {
+                    name: 'LAZULI Hiroshima Hotel and Lounge',
+                    prefecture: 'Hiroshima',
+                    type: 'Hotel',
+                    price: '£99+',
+                    desc: 'A trendy hotel with a stylish design and a great shared lounge area. Located conveniently near Hiroshima Station and within walking distance of many temples.',
+                    rating: '9.3/10 (Superb)',
+                    starRating: null,
+                    uniqueFeatures: ['Stylish, modern design', 'Shared lounge area', 'Free WiFi throughout the property'],
+                    reviewKeywords: ['Clean', 'modern', 'great location', 'stylish', 'comfortable'],
+                    bookingLink: 'https://www.agoda.com/en-gb/lazuli-hiroshima-hotel-and-lounge/hotel/hiroshima-jp.html'
+                },
+                {
+                    name: 'Kinsuikan',
+                    prefecture: 'Hiroshima',
+                    type: 'Ryokan',
+                    price: '£200+',
+                    desc: 'A traditional ryokan on Miyajima Island with a hot spring bath and beautiful views. Provides free private parking and a serene environment.',
+                    rating: '9.0/10 (Exceptional)',
+                    starRating: null,
+                    uniqueFeatures: ['Private parking on Miyajima', 'Hot spring bath', 'Traditional Japanese rooms'],
+                    reviewKeywords: ['Clean', 'serene', 'great location', 'hot spring', 'traditional'],
+                    bookingLink: 'https://www.booking.com/hotel/jp/kinsuikan.en-gb.html'
+                },
+                {
+                    name: 'Miyajima Grand Hotel Arimoto',
+                    prefecture: 'Hiroshima',
+                    type: 'Ryokan',
+                    price: '£238+',
+                    desc: 'A luxurious ryokan a short stroll from Itsukushima Shrine. Offers both Japanese-style and Western rooms, an outdoor onsen, and a free shuttle from the pier.',
+                    rating: '9.2/10 (Superb)',
+                    starRating: null,
+                    uniqueFeatures: ['Outdoor hot spring bath', 'Luxurious Japanese and Western rooms', 'Free shuttle from Miyajima Pier'],
+                    reviewKeywords: ['Excellent service', 'beautiful property', 'great onsen', 'luxurious', 'convenient'],
+                    bookingLink: 'https://www.agoda.com/miyajima-grand-hotel-arimoto/hotel/hiroshima-jp.html'
+                },
+                {
+                    name: 'Ryori Ryokan Tsurugata',
+                    prefecture: 'Okayama',
+                    type: 'Ryokan',
+                    price: '£240 - £480',
+                    desc: 'A luxury ryokan located within a stunning historic Edo-period building in the Kurashiki Bikan Quarter, offering an authentic Japanese cultural experience.',
+                    rating: '8.9/10 (Excellent)',
+                    starRating: 4,
+                    uniqueFeatures: ['Historic Edo-period building', 'Prime location in Kurashiki Bikan Quarter', 'Traditional and elegant "ryori" (cuisine)'],
+                    reviewKeywords: ['Historic', 'traditional', 'elegant', 'exceptional service', 'perfect location'],
+                    bookingLink: 'https://www.agoda.com/ryori-ryokan-tsurugata/hotel/default-city-km.html'
+                },
+                 {
+                    name: 'MOMOYA nagomi',
+                    prefecture: 'Okayama',
+                    type: 'Serviced Apartment',
+                    price: '£247+',
+                    desc: 'A meticulously clean and new serviced apartment with modern design and all necessary amenities, including kitchenware and free parking. Perfect for families.',
+                    rating: '9.7/10 (Exceptional)',
+                    starRating: null,
+                    uniqueFeatures: ['Modern and clean interior design', 'Free private parking', 'Family-friendly with toys and amenities', 'Close to city center'],
+                    reviewKeywords: ['Very clean', 'new', 'great location', 'free parking', 'lovely place for family'],
+                    bookingLink: 'https://www.booking.com/apartment/jp/momoya-nagomi-qing-hui-qiao-yi-bu-1-ri-1-zu-dai-qie-wu-liao-zhu-che-chang.en-gb.html'
+                },
+                {
+                    name: 'Chitose-岡山倉敷駅アクセス良好',
+                    prefecture: 'Okayama',
+                    type: 'Serviced Apartment',
+                    price: '£171+',
+                    desc: 'A beautifully renovated, traditional Japanese house offering a quiet neighborhood experience with a garden and a view of a small river. Suitable for up to 7 people.',
+                    rating: '9.3/10 (Superb)',
+                    starRating: null,
+                    uniqueFeatures: ['Traditional Japanese house (kominka)', 'Beautiful garden and river view', 'Quiet neighborhood', 'Access to Okayama and Kurashiki stations'],
+                    reviewKeywords: ['Quiet neighborhood', 'beautifully kept', 'traditional housing', 'lovely view'],
+                    bookingLink: 'https://www.booking.com/hotel/jp/chitose-gang-shan-cang-pu-yi-akusesu-liang-hao-guang-dagu-min-jia-zui-da7ren-wu-liao-zhu-che-chang-ting-fu-bbq.en-gb.html'
+                },
+                {
+                    name: 'Ikkenya Tsushima',
+                    prefecture: 'Okayama',
+                    type: 'Serviced Apartment',
+                    price: '£38+',
+                    desc: 'An affordable serviced apartment that provides an authentic Japanese house experience. Offers free WiFi and private parking.',
+                    rating: '9.0/10 (Superb)',
+                    starRating: null,
+                    uniqueFeatures: ['Authentic Japanese house experience', 'Free WiFi and private parking', 'Great value for money'],
+                    reviewKeywords: ['Very good for the price', 'authentic experience', 'clean', 'great for families'],
+                    bookingLink: 'https://www.booking.com/hotel/jp/ikkenya-tsushima.en-gb.html'
+                },
+                {
+                    name: 'Hotel Gyokusen',
+                    prefecture: 'Shimane',
+                    type: 'Ryokan',
+                    price: '£97+',
+                    desc: 'A beautiful ryokan in Tamatsukuri Onsen with a large public bath and an open-air hot spring known for its skin-beautifying properties. Offers a rich breakfast buffet with local ingredients.',
+                    rating: '8.3/10 (Very Good)',
+                    starRating: null,
+                    uniqueFeatures: ['Largest public bath in Tamatsukuri Onsen', 'Skin-beautifying hot spring water', 'Luxurious Japanese garden with bonfires', 'Lavish banquet cuisine'],
+                    reviewKeywords: ['Wonderful onsen', 'moisturized skin', 'relaxing and peaceful', 'great food', 'traditional'],
+                    bookingLink: 'https://www.hotel-gyokusen.co.jp/lg_en/'
+                },
+                 {
+                    name: '川の灯',
+                    prefecture: 'Shimane',
+                    type: 'Serviced Apartment',
+                    price: '£188+',
+                    desc: 'A beautifully appointed, recently renovated holiday home with a garden. A great location in Tamatsukuri Onsen for a peaceful and well-stocked stay.',
+                    rating: '9.6/10 (Exceptional)',
+                    starRating: null,
+                    uniqueFeatures: ['Beautifully appointed holiday home', 'Garden setting', 'Great location in Tamatsukuri Onsen', 'Very well stocked with amenities'],
+                    reviewKeywords: ['Great location', 'beautifully appointed', 'very well stocked', 'peaceful'],
+                    bookingLink: 'https://www.booking.com/hotel/jp/chonodeng.en-gb.html'
+                },
+                 {
+                    name: '湯庵 完全貸し切り庭付き',
+                    prefecture: 'Shimane',
+                    type: 'Ryokan',
+                    price: '£116+',
+                    desc: 'A quiet and spacious private ryokan with a garden in Matsue. Perfect for those who desire privacy and a traditional Japanese atmosphere.',
+                    rating: '8.7/10 (Fabulous)',
+                    starRating: null,
+                    uniqueFeatures: ['Private rental ryokan with a garden', 'Clean, quiet, and spacious rooms', 'Easy and simple check-in process'],
+                    reviewKeywords: ['Clean', 'easy', 'quiet', 'spacious', 'traditional', 'private'],
+                    bookingLink: 'https://www.booking.com/hotel/jp/tang-an-wan-quan-dai-qie-ting-fu.en-gb.html'
+                },
+                 {
+                    name: 'Notsu Ryokan',
+                    prefecture: 'Shimane',
+                    type: 'Ryokan',
+                    price: '£150 - £300+',
+                    desc: 'A historic ryokan in Matsue offering a tranquil and traditional experience with river views and an onsen. Provides a classic Japanese inn stay.',
+                    rating: null,
+                    starRating: null,
+                    uniqueFeatures: ['Historic ryokan with river views', 'Onsen facilities', 'Classic Japanese hospitality'],
+                    reviewKeywords: ['Historic', 'traditional', 'tranquil', 'river views'],
+                    bookingLink: 'https://www.agoda.com/notsu-ryokan/hotel/matsue-jp.html'
+                },
+                {
+                    name: 'Misasa Onsen Misasakan',
+                    prefecture: 'Tottori',
+                    type: 'Ryokan',
+                    price: '£150 - £300+',
+                    desc: 'A serene ryokan in the famous Misasa Onsen, known for its extensive selection of 12 hot spring baths and peaceful ambiance. Offers traditional architecture and warm hospitality.',
+                    rating: '8.6/10 (Excellent)',
+                    starRating: null,
+                    uniqueFeatures: ['12 varieties of hot spring baths', 'Serene onsen setting with gardens', 'Traditional and relaxing atmosphere', 'Good food'],
+                    reviewKeywords: ['Great onsen', 'traditional', 'clean', 'serene setting', 'good food'],
+                    bookingLink: 'https://www.hotels.com/ho1023979680/misasa-onsen-misasakan-misasa-japan/'
+                },
+                {
+                    name: 'Tottori Guest House Miraie BASE',
+                    prefecture: 'Tottori',
+                    type: 'Serviced Apartment',
+                    price: '£20 - £40',
+                    desc: 'A welcoming and affordable guest house ideal for budget-conscious travelers, offering a homey atmosphere and essential amenities like a shared kitchen and free parking.',
+                    rating: '8.8/10 (Excellent)',
+                    starRating: null,
+                    uniqueFeatures: ['Affordable prices', 'Shared kitchen facilities', 'Free parking', 'Convenient for exploring Tottori'],
+                    reviewKeywords: ['Clean', 'great value', 'friendly staff', 'comfortable'],
+                    bookingLink: 'https://www.agoda.com/tottori-guest-house-miraie-base/hotel/iwami-jp.html'
+                },
+                {
+                    name: 'Otani Sanso',
+                    prefecture: 'Yamaguchi',
+                    type: 'Ryokan',
+                    price: '£350 - £700+',
+                    desc: 'A luxurious and opulent 5-star onsen ryokan in Yumoto Onsen, known for its tranquil escape and stunning scenery. It offers a premium wellness and dining experience.',
+                    rating: '9.0/10',
+                    starRating: 5,
+                    uniqueFeatures: ['Luxury 5-star onsen ryokan with observatory', 'Rooms with private outdoor baths available', 'Exceptional dining and service', 'Stunning natural scenery'],
+                    reviewKeywords: ['Luxury', 'beautiful onsen', 'amazing food', 'relaxing', 'opulent', 'exceptional service'],
+                    bookingLink: 'https://www.agoda.com/otani-sanso/hotel/nagato-jp.html'
+                },
+            ],
+            cuisine: [
+                {
+                    name: 'Okonomiyaki',
+                    traditionalName: '御好燒',
+                    prefecture: 'Hiroshima',
+                    desc: 'A savory pancake layered with cabbage, noodles, and other ingredients.',
+                    details: {
+                        background: 'Hiroshima-style okonomiyaki is distinct from other regions because its ingredients are carefully layered rather than mixed. A thin crepe base is topped with a generous mound of shredded cabbage, bean sprouts, pork belly, and often noodles (soba or udon), all topped with a fried egg and a special sauce.',
+                        tips: 'Try to find a seat at the counter to watch the chef expertly prepare your meal on a sizzling hotplate right in front of you. It’s part of the experience!',
+                        restaurants: [{
+                            name: 'Okonomimura (お好み村)',
+                            description: 'A classic, multi-story building housing over a dozen small okonomiyaki stalls. It’s a lively and iconic spot.',
+                            address: '5-13 Shintenchi, Naka-ku, Hiroshima-shi',
+                            price: '¥1,000 - ¥2,000',
+                            hours: 'Varies by stall, but generally from late morning to late at night.'
+                        }]
+                    }
+                },
+                {
+                    name: 'Oysters (Kaki)',
+                    traditionalName: '牡蠣',
+                    prefecture: 'Hiroshima',
+                    desc: 'Hiroshima is Japan\'s top oyster producer, best enjoyed fresh or grilled.',
+                    details: {
+                        background: 'Hiroshima is responsible for over 60% of Japan\'s oyster production, and its oysters are known for their plump texture and rich, clean flavor. They are a must-try, especially during the peak season from October to March.',
+                        tips: 'On Miyajima Island, you can find many street stalls offering grilled oysters (yaki-gaki) on the go. For a more complete meal, visit a specialty restaurant.',
+                        restaurants: [{
+                            name: 'Kakiya (かき屋)',
+                            description: 'A popular and highly-rated oyster specialty restaurant located just a few minutes from the ferry terminal on Miyajima.',
+                            address: '129-1 Miyajimacho, Hatsukaichi, Hiroshima',
+                            price: '¥2,000 - ¥3,000 for a set meal.',
+                            hours: '10:00 AM - 6:00 PM.'
+                        }]
+                    }
+                },
+                {
+                    name: 'Kibi Dango',
+                    traditionalName: '吉備糰子',
+                    prefecture: 'Okayama',
+                    desc: 'Sweet dumplings made from millet flour, linked to the Momotaro fable.',
+                    details: {
+                        background: 'This sweet treat, made from mochi rice flour, is famously tied to the Japanese folklore of Momotaro (the Peach Boy), who shared it with his animal companions. It has a soft, chewy texture and is a popular souvenir across Okayama.',
+                        tips: 'Kibi dango comes in a variety of modern flavors, not just the traditional ones. Look for limited-edition seasonal versions or unique flavors like matcha and kinako.',
+                        restaurants: [{
+                            name: 'Koeido (廣榮堂)',
+                            description: 'A famous and historic maker of Kibi Dango with several shops, including one inside Okayama Station.',
+                            address: 'Multiple locations, including JR Okayama Station.',
+                            price: '¥500 - ¥1,000 for a box of souvenirs.',
+                            hours: 'Typically retail hours, check for specific store times.'
+                        }]
+                    }
+                },
+                {
+                    name: 'Okayama Barazushi',
+                    traditionalName: '岡山散壽司',
+                    prefecture: 'Okayama',
+                    desc: 'A vibrant, layered sushi dish with fresh seafood from the Seto Inland Sea.',
+                    details: {
+                        background: 'This traditional Okayama dish is a colorful, celebratory meal featuring a bed of sushi rice topped with a generous assortment of seafood and mountain vegetables. It was originally created as a form of protest against a government order to eat a simple, one-soup-one-side meal.',
+                        tips: 'The best Barazushi is made with fresh ingredients from the Seto Inland Sea, so look for restaurants with a good reputation for seafood.',
+                        restaurants: [{
+                            name: 'Ajitsukasa Zen (味司野村)',
+                            description: 'A classic local restaurant well-regarded for its traditional dishes, including Barazushi.',
+                            address: '1-7-23 Heiwa-cho, Kita-ku, Okayama-shi',
+                            price: '¥1,500 - ¥3,000 for a set meal.',
+                            hours: '11:30 AM - 2:00 PM, 5:00 PM - 9:00 PM (Closed Wednesdays).'
+                        }]
+                    }
+                },
+                {
+                    name: 'Izumo Soba',
+                    traditionalName: '出雲蕎麥麵',
+                    prefecture: 'Shimane',
+                    desc: 'Dark, firm buckwheat noodles often served in tiered lacquer boxes.',
+                    details: {
+                        background: 'Izumo soba is a dark, aromatic soba noodle made from whole buckwheat grains, giving it a rich flavor and a firm, chewy texture. It is often served in a three-tiered lacquer box, with different toppings and a dipping sauce added to each tier.',
+                        tips: 'Try the `warigo soba` (tiered soba) for the most authentic experience. You add the dipping sauce and toppings to the first tier, then pour the remaining sauce into the second, and so on.',
+                        restaurants: [{
+                            name: 'Soba-dokoro Yaegaki (そば処 八雲)',
+                            description: 'A popular and traditional soba shop located near Izumo Taisha Shrine.',
+                            address: '109 Izumo-cho, Izumo-shi, Shimane',
+                            price: '¥1,000 - ¥1,500.',
+                            hours: '11:00 AM - 6:00 PM (Closed Tuesdays).'
+                        }]
+                    }
+                },
+                {
+                    name: 'Shijimi Soup',
+                    traditionalName: '蜆湯',
+                    prefecture: 'Shimane',
+                    desc: 'A flavorful soup made with fresh clams harvested from Lake Shinji.',
+                    details: {
+                        background: 'The shijimi clams from Lake Shinji are a famous local delicacy. The small, flavorful clams are used to create a simple yet deeply savory soup that is said to be good for the liver and a perfect hangover cure.',
+                        tips: 'This is often served as part of a larger meal, especially for breakfast at a traditional ryokan, but you can also find it at local restaurants and stalls.',
+                        restaurants: [{
+                            name: 'Konpira Maru (こんぴら丸)',
+                            description: 'A well-regarded seafood restaurant with great views of Lake Shinji, offering fresh fish and shijimi clam dishes.',
+                            address: '2-1-3 Koryou-cho, Matsue, Shimane',
+                            price: '¥1,500 - ¥4,000',
+                            hours: '11:00 AM - 9:30 PM.'
+                        }]
+                    }
+                },
+                {
+                    name: 'Matsuba Crab',
+                    traditionalName: '松葉蟹',
+                    prefecture: 'Tottori',
+                    desc: 'Tottori\'s most prized winter food, a delicious and succulent snow crab.',
+                    details: {
+                        background: 'Matsuba crab is the local name for male snow crab from the Sea of Japan, which is in season from November to March. Tottori is one of the best places in Japan to eat this delicacy, which can be enjoyed in various ways, including boiled, grilled, or as sashimi.',
+                        tips: 'Look for restaurants that display their fresh catch. The prices can be high, but the flavor is worth it. It is also common to eat this at a ryokan in the winter as part of a kaiseki dinner.',
+                        restaurants: [{
+                            name: 'Kanikoku Tottori (蟹王国とっとり)',
+                            description: 'A crab specialty restaurant dedicated to serving fresh Tottori Matsuba crab in many forms.',
+                            address: '468 Sakanamachi, Tottori-shi',
+                            price: '¥8,000 - ¥20,000+',
+                            hours: '11:30 AM - 2:00 PM, 5:00 PM - 9:00 PM.'
+                        }]
+                    }
+                },
+                {
+                    name: 'Gyukotsu Ramen',
+                    traditionalName: '牛骨拉麵',
+                    prefecture: 'Tottori',
+                    desc: 'A unique and savory ramen made with a rich beef-bone broth.',
+                    details: {
+                        background: 'Unlike the more common pork or chicken-based broths, gyukotsu ramen is a Tottori specialty made from a clear, aromatic beef-bone broth. The soup is light yet deeply flavorful and satisfying.',
+                        tips: 'The broth is surprisingly light and savory, often paired with thin noodles. It is an unmissable dish for ramen lovers looking for a new experience.',
+                        restaurants: [{
+                            name: 'Nakamura-ya (ラーメンなかむら家)',
+                            description: 'A very popular, family-owned ramen shop famous for its gyukotsu ramen.',
+                            address: '407 Kurayoshi-shi, Tottori',
+                            price: '¥700 - ¥1,200',
+                            hours: '11:00 AM - 7:00 PM (Closed Mondays).'
+                        }]
+                    }
+                },
+                {
+                    name: 'Kawara Soba',
+                    traditionalName: '瓦片蕎麥麵',
+                    prefecture: 'Yamaguchi',
+                    desc: 'Green tea soba noodles served on a heated roof tile with various toppings.',
+                    details: {
+                        background: 'This iconic Yamaguchi dish features green tea soba noodles, thinly sliced beef, shredded egg, and other toppings served on a piping hot roof tile. The noodles at the bottom get crispy and delicious from the heat, adding a unique texture.',
+                        tips: 'Mix all the ingredients together with the tsuyu dipping sauce as you eat. Make sure to get some of the crispy noodles at the bottom!',
+                        restaurants: [{
+                            name: 'Gansō Kawara Soba Takase (元祖瓦そば たかせ)',
+                            description: 'The originator of kawara soba, with a long history and multiple locations, serving the classic dish in a traditional setting.',
+                            address: '2855-1 Toyourachōōgushi, Shimonoseki-shi',
+                            price: '¥1,500 - ¥2,500 per person.',
+                            hours: '11:00 AM - 9:00 PM.'
+                        }]
+                    }
+                },
+                {
+                    name: 'Fugu (Pufferfish)',
+                    traditionalName: '河豚',
+                    prefecture: 'Yamaguchi',
+                    desc: 'A delicacy expertly prepared by licensed chefs in Shimonoseki.',
+                    details: {
+                        background: 'Shimonoseki is the largest port in Japan for fugu, a notoriously delicate and potentially poisonous fish that must be prepared by a licensed chef. It is often served as thin-sliced sashimi (tessa), in a hot pot (tecchiri), or deep-fried.',
+                        tips: 'Fugu sashimi is famously presented in a beautiful, artistic arrangement. The best place to try a variety of fugu dishes at reasonable prices is the Karato Ichiba Market on weekends.',
+                        restaurants: [{
+                            name: 'Karato Ichiba Market (唐戶市場)',
+                            description: 'A bustling market with many vendors offering fresh seafood, including fugu sashimi and fried fugu, at affordable prices.',
+                            address: '5-50 Nishikaminoseki, Shimonoseki',
+                            price: '¥1,000 - ¥2,000 for a variety of dishes.',
+                            hours: 'Generally open for lunch on weekends and Fridays only.'
+                        }]
+                    }
+                },
+                 {
+                    name: 'Tai-meshi',
+                    traditionalName: '鯛魚飯',
+                    prefecture: 'Ehime',
+                    desc: 'A signature dish of sea bream cooked with rice in an earthenware pot.',
+                    details: {
+                        background: 'Tai-meshi, a signature dish of Ehime, features sea bream cooked with rice in a fragrant dashi broth. The gentle steaming process infuses the rice with the umami of the fish, creating a simple yet refined dish.',
+                        tips: 'Tai-meshi is best enjoyed when the sea bream is at its freshest. For a truly authentic experience, visit a restaurant specializing in local cuisine.',
+                        restaurants: [{
+                            name: 'Goshiki (五志喜)',
+                            description: 'A popular local restaurant in Matsuyama that serves a variety of regional Ehime dishes, including excellent Tai-meshi.',
+                            address: '3-5-4 Ichibancho, Matsuyama, Ehime',
+                            price: '¥1,500 - ¥4,000 for a set meal.',
+                            hours: '11:30 AM - 2:00 PM, 5:00 PM - 10:00 PM.'
+                        }]
+                    }
+                },
+                {
+                    name: 'Jakoten',
+                    traditionalName: '炸魚餅',
+                    prefecture: 'Ehime',
+                    desc: 'Fried fish cakes made from small, local fish, a popular snack and side dish.',
+                    details: {
+                        background: 'Jakoten is a type of fried fish paste cake, a specialty of Uwajima in Ehime. It is made by grinding up small, fresh fish, bones and all, into a paste, which is then shaped into small patties and deep-fried until golden brown.',
+                        tips: 'Jakoten is best eaten fresh and warm. Look for stalls or restaurants that serve it hot off the fryer for a crispy, savory snack.',
+                        restaurants: [{
+                            name: 'Ajitoki (味時)',
+                            description: 'A popular local spot in Matsuyama known for its udon and other local dishes, including fresh jakoten.',
+                            address: '3-10-8 Otemachi, Matsuyama, Ehime',
+                            price: '¥500 - ¥1,500',
+                            hours: '11:00 AM - 9:00 PM.'
+                        }]
+                    }
+                },
+                {
+                    name: 'Sanuki Udon',
+                    traditionalName: '讚岐烏龍麵',
+                    prefecture: 'Kagawa',
+                    desc: 'Famous throughout Japan for its firm, chewy texture, served in various hot and cold styles.',
+                    details: {
+                        background: 'Kagawa Prefecture is so famous for udon that it is sometimes called "Udon Prefecture." The noodles, known as Sanuki udon, are celebrated for their thick, square-shaped form and exceptionally firm, chewy texture (koshi). They are served in countless ways, from a simple, hot broth (kake udon) to a cold, thick dipping sauce (bukkake udon).',
+                        tips: 'For an authentic experience, visit a self-service udon shop (セルフうどん) where you can boil your own noodles and choose your own toppings, which are often tempura or other fried items.',
+                        restaurants: [{
+                            name: 'Udon Bakaichidai (手打十段うどんバカ一代)',
+                            description: 'A famous udon shop known for its long lines and incredible kama-tama udon (udon with a raw egg and soy sauce).',
+                            address: '1-6-7 Tenjinmae, Takamatsu, Kagawa',
+                            price: '¥500 - ¥1,000',
+                            hours: '6:00 AM - 6:00 PM.'
+                        }]
+                    }
+                },
+                {
+                    name: 'Honetsukidori',
+                    traditionalName: '帶骨雞腿',
+                    prefecture: 'Kagawa',
+                    desc: 'A seasoned, bone-in chicken thigh that is grilled to perfection, crispy on the outside and juicy inside.',
+                    details: {
+                        background: 'Honetsukidori is a bone-in chicken thigh, seasoned with garlic and spices, and roasted to a perfect crispy exterior while remaining juicy inside. It is a signature dish of Marugame, Kagawa, and is a beloved local delicacy often paired with beer.',
+                        tips: 'The dish comes in two main styles: `wakadori` (young chicken, tender and soft) and `oyadori` (older chicken, chewier and more flavorful). Wakadori is a great introduction, while oyadori is for those who enjoy a more robust flavor.',
+                        restaurants: [{
+                            name: 'Honetsukidori Ikkaku (一鶴)',
+                            description: 'A legendary and hugely popular restaurant chain that is the go-to spot for this dish.',
+                            address: '2-1-10 Kawaramachi, Takamatsu, Kagawa',
+                            price: '¥1,000 - ¥1,500 per chicken leg.',
+                            hours: 'Weekdays 4:00 PM - 11:00 PM, Weekends/Holidays 11:00 AM - 11:00 PM.'
+                        }]
+                    }
+                },
+            ]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const experienceFilters = document.getElementById('experience-filters');
+            const experiencesGrid = document.getElementById('experiences-grid');
+            
+            const filterPrefecture = document.getElementById('filter-prefecture');
+            const filterType = document.getElementById('filter-type');
+            const accommodationsList = document.getElementById('accommodations-list');
+            
+            const cuisineFilters = document.getElementById('cuisine-filters');
+            const cuisineGrid = document.getElementById('cuisine-grid');
+
+            const modal = document.getElementById('activity-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            const modalClose = document.getElementById('modal-close');
+
+            let accommodationChart;
+
+            function init() {
+                setupExperienceFilters();
+                displayExperiences('Yamaguchi');
+                setupAccommodationFilters();
+                createAccommodationChart();
+                displayAccommodations();
+                setupCuisineFilters();
+                displayCuisine('Yamaguchi');
+            }
+
+            function createFilterButton(text, value, group, active = false) {
+                const button = document.createElement('button');
+                button.textContent = text;
+                button.dataset.filter = value;
+                button.dataset.group = group;
+                button.className = `filter-button font-semibold py-2 px-5 rounded-full bg-white shadow-sm border border-gray-200 hover:bg-blue-50 transition-all ${active ? 'active' : ''}`;
+                return button;
+            }
+
+            function setupExperienceFilters() {
+                const prefectures = appData.prefectures.map(p => p.name);
+                prefectures.forEach((p, index) => {
+                    const button = createFilterButton(`${p} (${appData.prefectures.find(pref => pref.name === p).traditional})`, p, 'experience', index === 0);
+                    button.addEventListener('click', () => {
+                        document.querySelectorAll('[data-group="experience"]').forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        displayExperiences(p);
+                    });
+                    experienceFilters.appendChild(button);
+                });
+            }
+
+            function displayExperiences(prefectureName) {
+                const filtered = appData.experiences.filter(exp => exp.prefecture === prefectureName);
+                experiencesGrid.innerHTML = '';
+                 if (filtered.length === 0) {
+                    experiencesGrid.innerHTML = `<p class="text-slate-500 col-span-full text-center">No specific experiences listed for this prefecture in the guide. Explore its general attractions!</p>`;
+                } else {
+                    filtered.forEach(exp => {
+                        const card = document.createElement('div');
+                        card.className = 'content-card bg-white p-6 rounded-xl shadow-md flex flex-col';
+                        card.innerHTML = `
+                            <h3 class="font-bold text-lg text-blue-700 mb-2">${exp.name}</h3>
+                            <p class="text-slate-600 flex-grow">${exp.shortDesc}</p>
+                            <button data-exp-id="${exp.id}" class="mt-4 self-start bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">Details</button>
+                        `;
+                        experiencesGrid.appendChild(card);
+                    });
+                }
+            }
+            
+            function openModal(experienceId) {
+                const exp = appData.experiences.find(e => e.id === experienceId);
+                if (!exp) return;
+
+                modalTitle.textContent = exp.name;
+                modalBody.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-slate-700 border-b pb-1 mb-2">Background</h4>
+                            <p class="text-slate-600">${exp.details.background}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-slate-700 border-b pb-1 mb-2">Options</h4>
+                            <ul class="list-disc list-inside text-slate-600 space-y-1">${exp.details.options.map(o => `<li>${o}</li>`).join('')}</ul>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-slate-700 border-b pb-1 mb-2">Price</h4>
+                            <p class="text-slate-600">${exp.details.price}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-slate-700 border-b pb-1 mb-2">Opening Hours</h4>
+                            <p class="text-slate-600">${exp.details.openingHours}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-slate-700 border-b pb-1 mb-2">Transportation</h4>
+                            <p class="text-slate-600">${exp.details.transportation}</p>
+                        </div>
+                    </div>
+                `;
+                modal.classList.remove('hidden');
+                setTimeout(() => modal.classList.remove('opacity-0'), 10);
+                setTimeout(() => modal.querySelector('.modal-content').classList.remove('scale-95'), 10);
+            }
+
+            function closeModal() {
+                modal.querySelector('.modal-content').classList.add('scale-95');
+                modal.classList.add('opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+            
+            experiencesGrid.addEventListener('click', (e) => {
+                if (e.target.matches('[data-exp-id]')) {
+                    openModal(e.target.dataset.expId);
+                }
+            });
+
+            modalClose.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+
+            function setupAccommodationFilters() {
+                const prefectures = ['All', 'Yamaguchi', 'Hiroshima', 'Okayama', 'Tottori', 'Shimane'];
+                const types = ['All', 'Hotel', 'Ryokan', 'Serviced Apartment'];
+
+                prefectures.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p;
+                    option.textContent = p;
+                    filterPrefecture.appendChild(option);
+                });
+
+                types.forEach(t => {
+                    const option = document.createElement('option');
+                    option.value = t;
+                    option.textContent = t;
+                    filterType.appendChild(option);
+                });
+
+                filterPrefecture.addEventListener('change', displayAccommodations);
+                filterType.addEventListener('change', displayAccommodations);
+            }
+
+            function displayAccommodations() {
+                const selectedPrefecture = filterPrefecture.value;
+                const selectedType = filterType.value;
+
+                const filtered = appData.accommodations.filter(acc => {
+                    const prefectureMatch = selectedPrefecture === 'All' || acc.prefecture === selectedPrefecture;
+                    const typeMatch = selectedType === 'All' || acc.type === selectedType;
+                    return prefectureMatch && typeMatch;
+                });
+
+                accommodationsList.innerHTML = '';
+                if (filtered.length === 0) {
+                    accommodationsList.innerHTML = `<p class="text-slate-500 col-span-full text-center">No accommodations match your criteria.</p>`;
+                } else {
+                    filtered.forEach(acc => {
+                        const starRatingHtml = acc.starRating ? `
+                            <div class="flex items-center text-yellow-500">
+                                ${'★'.repeat(acc.starRating)}
+                                <span class="text-slate-500 text-xs ml-1">(${acc.starRating}-Star)</span>
+                            </div>
+                        ` : '';
+                        const reviewKeywordsHtml = acc.reviewKeywords && acc.reviewKeywords.length > 0 ? `
+                            <div class="flex flex-wrap gap-1 mt-2">
+                                ${acc.reviewKeywords.map(keyword => `<span class="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-1 rounded-full">${keyword}</span>`).join('')}
+                            </div>
+                        ` : '';
+                        const ratingHtml = acc.rating ? `
+                            <div class="flex items-center mt-2">
+                                <span class="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">${acc.rating}</span>
+                                <span class="text-slate-500 text-xs ml-2">(${acc.reviewKeywords ? acc.reviewKeywords.length : ''} reviews)</span>
+                            </div>
+                        ` : '';
+
+                        const card = document.createElement('div');
+                        card.className = 'content-card bg-white p-6 rounded-xl shadow-md flex flex-col justify-between';
+                        card.innerHTML = `
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="font-bold text-lg text-blue-700">${acc.name}</h3>
+                                    <span class="text-sm font-medium bg-blue-100 text-blue-800 py-1 px-2 rounded-full">${acc.type}</span>
+                                </div>
+                                ${starRatingHtml}
+                                ${ratingHtml}
+                                <p class="text-slate-500 text-sm mt-1">${acc.prefecture} (${appData.prefectures.find(p => p.name === acc.prefecture).traditional})</p>
+                                <p class="text-slate-600 my-3">${acc.desc}</p>
+                                <div class="space-y-1 mt-2">
+                                    <h4 class="font-semibold text-sm text-slate-700">Highlights</h4>
+                                    <ul class="list-disc list-inside text-slate-600 text-sm">
+                                        ${acc.uniqueFeatures.map(feature => `<li>${feature}</li>`).join('')}
+                                    </ul>
+                                </div>
+                                ${reviewKeywordsHtml}
+                            </div>
+                            <div class="mt-4 flex items-center justify-between">
+                                <span class="font-semibold text-slate-700 text-lg">${acc.price}</span>
+                                <a href="${acc.bookingLink}" target="_blank" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">Book Now</a>
+                            </div>
+                        `;
+                        accommodationsList.appendChild(card);
+                    });
+                }
+                if (accommodationChart) {
+                    updateAccommodationChart(selectedType);
+                }
+            }
+
+            function createAccommodationChart() {
+                const ctx = document.getElementById('accommodationChart').getContext('2d');
+                const initialData = getAccommodationChartData('All');
+
+                accommodationChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: initialData.labels,
+                        datasets: [{
+                            label: 'Number of Listings',
+                            data: initialData.data,
+                            backgroundColor: '#007bff',
+                            borderColor: '#0056b3',
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'x',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1e293b',
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 12 },
+                                padding: 10,
+                                cornerRadius: 4,
+                                displayColors: false
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1, color: '#475569' }, grid: { color: '#e2e8f0' } },
+                            x: { ticks: { color: '#475569' }, grid: { display: false } }
+                        }
+                    }
+                });
+            }
+            
+            function getAccommodationChartData(typeFilter) {
+                const labels = appData.prefectures.filter(p => ['Yamaguchi', 'Hiroshima', 'Okayama', 'Tottori', 'Shimane'].includes(p.name)).map(p => p.name);
+                const data = labels.map(prefectureName => {
+                    return appData.accommodations.filter(acc => {
+                        const prefectureMatch = acc.prefecture === prefectureName;
+                        const typeMatch = typeFilter === 'All' || acc.type === typeFilter;
+                        return prefectureMatch && typeMatch;
+                    }).length;
+                });
+                return { labels, data };
+            }
+
+            function updateAccommodationChart(typeFilter) {
+                const newData = getAccommodationChartData(typeFilter);
+                accommodationChart.data.datasets[0].data = newData.data;
+                accommodationChart.data.datasets[0].label = `${typeFilter} Listings`;
+                accommodationChart.update();
+            }
+
+            function setupCuisineFilters() {
+                const prefectures = appData.prefectures.map(p => p.name);
+                prefectures.forEach((p, index) => {
+                    const button = createFilterButton(`${p} (${appData.prefectures.find(pref => pref.name === p).traditional})`, p, 'cuisine', index === 0);
+                    button.addEventListener('click', () => {
+                        document.querySelectorAll('[data-group="cuisine"]').forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        displayCuisine(p);
+                    });
+                    cuisineFilters.appendChild(button);
+                });
+            }
+
+            function displayCuisine(prefectureName) {
+                const filtered = appData.cuisine.filter(c => c.prefecture === prefectureName);
+                cuisineGrid.innerHTML = '';
+                 if (filtered.length === 0) {
+                    cuisineGrid.innerHTML = `<p class="text-slate-500 col-span-full text-center">No specific cuisine listed for this prefecture in the guide.</p>`;
+                } else {
+                    filtered.forEach(item => {
+                        const restaurantsHtml = item.details.restaurants.length > 0 ? `
+                            <div class="mt-4 pt-4 border-t border-slate-200">
+                                <h4 class="font-semibold text-sm text-slate-700 mb-2">Where to try?</h4>
+                                ${item.details.restaurants.map(rest => `
+                                    <div class="space-y-1">
+                                        <p class="font-medium text-slate-800">${rest.name} (${rest.description})</p>
+                                        <p class="text-xs text-slate-500"><strong>Address:</strong> ${rest.address}</p>
+                                        <p class="text-xs text-slate-500"><strong>Price:</strong> ${rest.price}</p>
+                                        <p class="text-xs text-slate-500"><strong>Hours:</strong> ${rest.hours}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '';
+
+                        const card = document.createElement('div');
+                        card.className = 'content-card bg-white p-6 rounded-xl shadow-md';
+                        card.innerHTML = `
+                            <h3 class="font-bold text-md text-blue-700 mb-2">${item.name} (${item.traditionalName})</h3>
+                            <p class="text-slate-600 text-sm mb-2">${item.details.background}</p>
+                            <p class="text-xs text-blue-600 font-semibold italic"><strong>Tips:</strong> ${item.details.tips}</p>
+                            ${restaurantsHtml}
+                        `;
+                        cuisineGrid.appendChild(card);
+                    });
+                }
+            }
+
+            init();
+        });
+    </script>
+</body>
+</html>
 
