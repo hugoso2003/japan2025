@@ -1,1 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Chosen Palette: Serene Alps -->
+    <!-- Application Structure Plan: A single-page application with a fixed header and navigation that reveals different content sections (Overview, Destinations, Experiences, Itinerary, Seasonal Guide, Tools). This dashboard-like structure allows users to focus on specific planning tasks (e.g., exploring, budgeting) without losing context. The flow is designed to be non-linear, letting users jump between sections as needed. This is more user-friendly than a long, scrolling document, as it organizes the vast amount of report data into manageable, task-oriented views, enhancing usability and preventing information overload. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Prefecture Overviews -> Goal: Compare regions -> Viz: Interactive map-like element with clickable hotspots and cards -> Interaction: Click to reveal detailed info -> Justification: Provides a high-level geographical context and an engaging entry point.
+        - Report Info: Accommodation Data (Prices, Ratings) -> Goal: Compare lodging options -> Viz: Filterable grid of cards + dynamic bar chart (Chart.js) -> Interaction: Filter by prefecture/type, chart updates to show average price -> Justification: Combines detailed data (cards) with quick visual comparison (chart).
+        - Report Info: 14-Day Itinerary -> Goal: Organize a schedule -> Viz: Vertical timeline with collapsible day sections (HTML/CSS) -> Interaction: Click to expand/collapse daily details -> Justification: Intuitive chronological representation of the plan.
+        - Report Info: Budgeting Costs -> Goal: Help users plan finances -> Viz: Donut chart (Chart.js) -> Interaction: Select travel style (Budget/Mid/Luxury) to update chart -> Justification: Excellent for showing parts of a whole, making budget allocation easy to grasp.
+        - Report Info: Experiences/Activities -> Goal: Discover things to do -> Viz: Filterable grid of cards -> Interaction: Filter by category (e.g., Culture, Nature) to update the grid -> Justification: Allows users to easily find activities matching their interests.
+        - Report Info: Seasonal Events -> Goal: Find time-specific events -> Viz: Filterable grid of cards -> Interaction: Filter by season to update grid -> Justification: Helps users find events relevant to their travel dates.
+        Library/Method: Chart.js for all charts, Vanilla JS for all interactions and DOM manipulation.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <title>Chubu Explorer: Interactive Travel Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F7F4;
+            color: #3D405B;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #E07A5F;
+            border-bottom-color: #E07A5F;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .card {
+            background-color: #FFFFFF;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.1);
+        }
+        .btn {
+            transition: background-color 0.3s ease;
+        }
+        .filter-btn.active {
+            background-color: #E07A5F;
+            color: white;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -30px;
+            top: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #81B29A;
+            border: 3px solid #F8F7F4;
+        }
+        .timeline-line {
+            position: absolute;
+            left: -21px;
+            top: 20px;
+            width: 2px;
+            height: calc(100% - 20px);
+            background-color: #81B29A;
+        }
+        .modal-bg {
+            background-color: rgba(0,0,0,0.5);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-md shadow-md sticky top-0 z-40">
+        <nav class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-2xl font-bold text-[#3D405B]">Chubu Explorer 🗺️</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#" class="nav-link active px-3 py-2 rounded-md text-sm font-medium" data-section="overview">Overview</a>
+                        <a href="#" class="nav-link px-3 py-2 rounded-md text-sm font-medium" data-section="destinations">Destinations</a>
+                        <a href="#" class="nav-link px-3 py-2 rounded-md text-sm font-medium" data-section="experiences">Experiences</a>
+                        <a href="#" class="nav-link px-3 py-2 rounded-md text-sm font-medium" data-section="itinerary">Itinerary</a>
+                        <a href="#" class="nav-link px-3 py-2 rounded-md text-sm font-medium" data-section="seasonal">Seasonal Guide</a>
+                        <a href="#" class="nav-link px-3 py-2 rounded-md text-sm font-medium" data-section="tools">Travel Tools</a>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="p-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100">
+                        <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </nav>
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#" class="nav-link active block px-3 py-2 rounded-md text-base font-medium" data-section="overview">Overview</a>
+                <a href="#" class="nav-link block px-3 py-2 rounded-md text-base font-medium" data-section="destinations">Destinations</a>
+                <a href="#" class="nav-link block px-3 py-2 rounded-md text-base font-medium" data-section="experiences">Experiences</a>
+                <a href="#" class="nav-link block px-3 py-2 rounded-md text-base font-medium" data-section="itinerary">Itinerary</a>
+                <a href="#" class="nav-link block px-3 py-2 rounded-md text-base font-medium" data-section="seasonal">Seasonal Guide</a>
+                <a href="#" class="nav-link block px-3 py-2 rounded-md text-base font-medium" data-section="tools">Travel Tools</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <section id="overview" class="section active">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-[#3D405B] mb-4">Unveiling the Heart of Japan</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">Welcome to your interactive guide to the Chubu region. This tool is designed to help you explore the rich culture, stunning landscapes, and unique experiences of Gifu, Aichi, and Nagano. Click on the map to begin your journey, or use the navigation to dive into specific aspects of your trip planning.</p>
+            </div>
+            <div class="card p-6">
+                <h3 class="text-2xl font-semibold text-center mb-6">Regional Map</h3>
+                 <div class="relative w-full max-w-4xl mx-auto h-96 md:h-[500px] bg-green-50 rounded-lg p-4 border border-gray-200">
+                    <div class="absolute top-[20%] left-[45%] text-center cursor-pointer hover:scale-110 transition-transform" data-prefecture="gifu">
+                        <span class="text-4xl">🏯</span>
+                        <p class="font-bold text-[#3D405B]">Gifu</p>
+                    </div>
+                    <div class="absolute top-[60%] left-[60%] text-center cursor-pointer hover:scale-110 transition-transform" data-prefecture="aichi">
+                        <span class="text-4xl">🚗</span>
+                        <p class="font-bold text-[#3D405B]">Aichi</p>
+                    </div>
+                    <div class="absolute top-[35%] left-[20%] text-center cursor-pointer hover:scale-110 transition-transform" data-prefecture="nagano">
+                        <span class="text-4xl">🏔️</span>
+                        <p class="font-bold text-[#3D405B]">Nagano</p>
+                    </div>
+                    <p class="absolute bottom-2 right-2 text-xs text-gray-400">A conceptual map. Click an icon to explore a prefecture.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="destinations" class="section">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-[#3D405B] mb-4">Destination Deep Dive</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">Discover the unique character of each prefecture. Select a region below to uncover its history, key attractions, and cultural highlights, from the alpine wonders of Nagano to the industrial heart of Aichi.</p>
+            </div>
+            <div class="flex justify-center space-x-2 mb-8">
+                <button class="filter-btn active bg-[#81B29A] text-white px-4 py-2 rounded-full font-semibold" data-prefecture-tab="gifu">Gifu 岐阜縣</button>
+                <button class="filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-prefecture-tab="aichi">Aichi 愛知縣</button>
+                <button class="filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-prefecture-tab="nagano">Nagano 長野縣</button>
+            </div>
+            <div id="destinations-content"></div>
+        </section>
+
+        <section id="experiences" class="section">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-[#3D405B] mb-4">Experience Finder</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">What kind of adventure are you looking for? Use the filters to find activities that match your interests, whether it's soaking in an onsen, hiking a historic trail, or joining a vibrant local festival.</p>
+            </div>
+            <div class="flex flex-wrap justify-center gap-2 mb-8">
+                <button class="filter-btn active bg-[#81B29A] text-white px-4 py-2 rounded-full font-semibold" data-experience-filter="all">All</button>
+                <button class="filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-experience-filter="Culture & History">Culture & History</button>
+                <button class="filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-experience-filter="Food & Drink">Food & Drink</button>
+                <button class="filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-experience-filter="Nature & Adventure">Nature & Adventure</button>
+                <button class="filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-experience-filter="Wellness & Relaxation">Wellness & Relaxation</button>
+                <button class="filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-experience-filter="Seasonal Events">Seasonal Events</button>
+            </div>
+            <div id="experiences-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+
+        <section id="itinerary" class="section">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-[#3D405B] mb-4">14-Day Chubu Itinerary</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">Here is a detailed 14-day itinerary designed for an adventurous, food-loving couple. Click on each day to see the suggested plan for the morning, afternoon, and evening. Use the checkboxes to build a personalized plan.</p>
+            </div>
+            <div class="max-w-4xl mx-auto">
+                <div id="itinerary-timeline" class="relative pl-8"></div>
+            </div>
+             <div id="my-plan-summary" class="mt-12 card p-6 hidden">
+                <h3 class="text-2xl font-semibold mb-4">My Personalized Plan</h3>
+                <ul id="my-plan-list" class="list-disc list-inside space-y-2 text-gray-700">
+                </ul>
+                <p id="my-plan-placeholder" class="text-gray-500">Check items in the itinerary to add them here.</p>
+            </div>
+        </section>
+
+        <section id="seasonal" class="section">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-[#3D405B] mb-4">Seasonal Guide</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">Chubu's beauty transforms with the seasons. Explore major festivals and natural phenomena. For your trip in mid-October to mid-November, the "Autumn" filter will highlight the most relevant events like vibrant foliage festivals.</p>
+            </div>
+            <div class="flex flex-wrap justify-center gap-2 mb-8">
+                <button class="filter-btn active bg-[#81B29A] text-white px-4 py-2 rounded-full font-semibold" data-season-filter="all">All Seasons</button>
+                <button class="filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-season-filter="spring">Spring (Mar-May)</button>
+                <button class="filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-season-filter="summer">Summer (Jun-Aug)</button>
+                <button class="filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-season-filter="autumn">Autumn (Sep-Nov)</button>
+                <button class="filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-season-filter="winter">Winter (Dec-Feb)</button>
+            </div>
+            <div id="seasonal-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+
+        <section id="tools" class="section">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-[#3D405B] mb-4">Travel Tools & Resources</h2>
+                <p class="text-lg text-gray-600 max-w-3xl mx-auto">Plan the practical side of your trip. Explore transportation options, find the perfect place to stay, estimate your budget, and learn some essential tips and phrases for a smooth journey.</p>
+            </div>
+            <div class="max-w-5xl mx-auto">
+                <div class="mb-4 border-b border-gray-200">
+                    <ul class="flex flex-wrap -mb-px text-sm font-medium text-center" id="tools-tabs">
+                        <li class="mr-2"><button class="tools-tab-btn inline-block p-4 border-b-2 rounded-t-lg" data-toolstab="accommodation">🏨 Accommodation</button></li>
+                        <li class="mr-2"><button class="tools-tab-btn inline-block p-4 border-b-2 rounded-t-lg" data-toolstab="transport">🚄 Transport</button></li>
+                        <li class="mr-2"><button class="tools-tab-btn inline-block p-4 border-b-2 rounded-t-lg" data-toolstab="shopping">🛍️ Shopping</button></li>
+                        <li class="mr-2"><button class="tools-tab-btn inline-block p-4 border-b-2 rounded-t-lg" data-toolstab="budget">💰 Budgeting</button></li>
+                        <li><button class="tools-tab-btn inline-block p-4 border-b-2 rounded-t-lg" data-toolstab="tips">💡 Tips & Phrases</button></li>
+                    </ul>
+                </div>
+                <div id="tools-content">
+                    <div id="accommodation-tool" class="tool-content"></div>
+                    <div id="transport-tool" class="tool-content hidden"></div>
+                    <div id="shopping-tool" class="tool-content hidden"></div>
+                    <div id="budget-tool" class="tool-content hidden"></div>
+                    <div id="tips-tool" class="tool-content hidden"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="details-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-bg">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="modal-title" class="text-2xl font-bold"></h3>
+                    <button id="modal-close" class="text-gray-500 hover:text-gray-800">&times;</button>
+                </div>
+                <div id="modal-content" class="prose max-w-none"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const data = {
+            destinations: {
+                gifu: {
+                    name: "Gifu Prefecture (岐阜縣)",
+                    summary: "Gifu holds significant historical importance, particularly during the Sengoku period. The prefecture is famous for its traditional crafts, such as Mino-yaki pottery and Seki cutlery. Dominated by the Japanese Alps in the north, it offers stunning mountain scenery and the fertile Nobi Plain in the south. Key cultural features include cormorant fishing, gassho-zukuri farmhouses in Shirakawa-go, and a rich onsen culture.",
+                    attractions: [
+                        { name: "Takayama (高山)", description: "Often called 'Little Kyoto', this city features preserved Edo-period streets (Sanmachi Suji), sake breweries, and morning markets. It's a hub for Hida beef and traditional crafts.", icon: "🏮" },
+                        { name: "Shirakawa-go (白川鄉)", description: "A UNESCO World Heritage site famous for its traditional gassho-zukuri farmhouses with steep thatched roofs. Offers a glimpse into rural Japanese life.", icon: "🏡" },
+                        { name: "Gifu City (岐阜市)", description: "Home to Gifu Castle, perched atop Mt. Kinka, and the Nagara River, where the ancient tradition of cormorant fishing (ukai) can be observed in summer.", icon: "🏯" },
+                        { name: "Gero Onsen (下呂溫泉)", description: "One of Japan's most famous hot spring resorts, known for its smooth, skin-beautifying waters.", icon: "♨️" },
+                        { name: "Sekigahara (關原)", description: "The historic battlefield where the pivotal battle of 1600 took place, leading to the unification of Japan. A memorial museum commemorates the event.", icon: "⚔️" },
+                    ]
+                },
+                aichi: {
+                    name: "Aichi Prefecture (愛知縣)",
+                    summary: "The birthplace of the three great unifiers of Japan, Aichi is a blend of rich samurai history and modern industrial power, being home to Toyota. Its capital, Nagoya, is a bustling metropolis with unique cuisine ('Nagoya Meshi'). The prefecture features a Pacific coastline, plains, and mountains.",
+                    attractions: [
+                        { name: "Nagoya (名古屋)", description: "Japan's fourth-largest city. Key sights include Nagoya Castle, Atsuta Shrine, the Toyota Museum, and the vibrant Osu Kannon shopping district.", icon: "🏙️" },
+                        { name: "Inuyama (犬山)", description: "A charming castle town featuring one of Japan's oldest original castles, the Urakuen Garden, and the Meiji-mura architectural museum.", icon: "犬" },
+                        { name: "Ghibli Park (吉卜力公園)", description: "An immersive theme park based on the beloved films of Studio Ghibli. Advance booking is essential.", icon: "🎬" },
+                        { name: "Tokoname (常滑)", description: "A historic pottery town, one of Japan's Six Ancient Kilns, famous for its ceramics, teapots, and maneki-neko (lucky cats).", icon: "🏺" },
+                    ]
+                },
+                nagano: {
+                    name: "Nagano Prefecture (長野縣)",
+                    summary: "Known as the 'Roof of Japan', this landlocked prefecture is dominated by the majestic Japanese Alps. It hosted the 1998 Winter Olympics and is a premier destination for skiing and hiking. Its cultural highlights include the historic Zenko-ji Temple, preserved post towns on the Nakasendo trail, and the famous snow monkeys.",
+                    attractions: [
+                        { name: "Nagano City (長野市)", description: "Home to the venerable Zenko-ji Temple, a major pilgrimage site. The area also includes the historic Matsushiro castle town and Togakushi Shrine.", icon: "🙏" },
+                        { name: "Matsumoto (松本)", description: "Features the stunning Matsumoto Castle, one of Japan's most beautiful original castles. The city has charming historic streets like Nakamachi-dori.", icon: "🏯" },
+                        { name: "Japanese Alps (日本阿爾卑斯)", description: "Includes premier nature spots like Kamikochi for hiking, the Kiso Valley with its preserved post towns (Magome & Tsumago), and Hakuba for winter sports.", icon: "🏔️" },
+                        { name: "Jigokudani Monkey Park (地獄谷野猿公苑)", description: "World-famous for its wild Japanese macaques (snow monkeys) that bathe in natural hot springs during the winter.", icon: "🐒" },
+                    ]
+                }
+            },
+            experiences: [
+                { name: "Nakasendo Trail Hike (中山道健行)", category: "Nature & Adventure", prefecture: "Nagano", description: "Walk a section of the ancient highway connecting Kyoto and Edo, passing through beautifully preserved post towns like Magome and Tsumago.", price: "Free to low cost", supplier: "Self-guided", booking: "N/A" },
+                { name: "Onsen Soaking in Gero (下呂溫泉泡湯)", category: "Wellness & Relaxation", prefecture: "Gifu", description: "Rejuvenate in one of Japan's top three onsen towns, known for its water's beautifying properties. Public bath houses available.", price: "¥500-¥1,500 (~£3-£9) per entry for public baths", supplier: "Various ryokans and public bathhouses like Shirasagi no Yu", booking: "Walk-in or ryokan stay" },
+                { name: "Seki Blade Making (關市刀具製作) Workshop", category: "Culture & History", prefecture: "Gifu", description: "Try your hand at traditional bladesmithing in Seki, a city with a 700-year history of sword and knife making. You can sharpen knives or forge small items.", price: "¥3,000-¥10,000 (~£16-£53)", supplier: "Sekikaji Blade Hall (關鍛冶傳承館)", booking: "Check official website or local tourism office for booking details and schedules." },
+                { name: "Hida Beef Tasting (飛驒牛品嚐)", category: "Food & Drink", prefecture: "Gifu", description: "Indulge in premium Hida wagyu beef in Takayama. Enjoy skewers, sushi, or full meals.", price: "Skewers: ¥700-¥1,500 (~£4-£9); Full Meal: ¥5,000-¥15,000+ (~£27-£80+)", supplier: "Various restaurants (e.g., Hida Takayama Kyoya, Ajikura Tengoku) and street vendors", booking: "Restaurants might require reservations for dinner, street food is walk-up." },
+                { name: "Gujo Odori Dance Festival (郡上舞祭)", category: "Seasonal Events", prefecture: "Gifu", description: "Join one of Japan's most important dance festivals, held on 31 nights from July to September in Gujo Hachiman. Experience traditional folk dancing in the streets.", price: "Free to watch/participate", supplier: "Gujo Hachiman Tourism Association", booking: "N/A (public event)" },
+                { name: "Nagoya Meshi Food Tour (名古屋美食之旅)", category: "Food & Drink", prefecture: "Aichi", description: "Explore Nagoya's unique culinary scene, tasting specialties like Miso Katsu, Tebasaki chicken wings, and Hitsumabushi eel.", price: "¥8,000-¥15,000 (~£42-£80) per person", supplier: "Local food tour operators (e.g., Nagoya Foodie Tours, Magical Trip)", booking: "Book via their websites or Klook/Viator." },
+                { name: "Kamikochi Alpine Exploration (上高地高山探索)", category: "Nature & Adventure", prefecture: "Nagano", description: "Hike in a pristine mountain valley in the Japan Alps, with stunning views of crystal-clear rivers and towering peaks. Access is restricted to buses/taxis.", price: "Bus fare: ¥2,500-¥4,500 (~£13-£24) return", supplier: "Alpico Kotsu (bus operator)", booking: "Bus tickets can be purchased on-site or online for some routes." },
+                { name: "Zenko-ji Temple Stay (善光寺宿坊體驗)", category: "Culture & History", prefecture: "Nagano", description: "Experience a 'shukubo' (temple lodging) at Zenko-ji, participating in morning prayers and tasting Buddhist vegetarian cuisine.", price: "¥10,000-¥20,000 (~£53-£106) per person including meals", supplier: "Various Shukubo near Zenko-ji (e.g., Komatsu-in, Engyoin)", booking: "Book directly with the shukubo or via Japanese Guest Houses website." },
+                { name: "Ghibli Park Visit (吉卜力公園參觀)", category: "Culture & History", prefecture: "Aichi", description: "Step into the world of Studio Ghibli films at this highly popular theme park. Requires advance booking.", price: "¥1,000-¥3,500 (~£5-£19) per area (prices vary by area and date)", supplier: "Studio Ghibli Park Official Website (via Lawson Ticket)", booking: "Highly recommended to book tickets 2-3 months in advance as they sell out quickly." },
+                { name: "Nozawa Onsen Fire Festival (野澤溫泉道祖神祭)", category: "Seasonal Events", prefecture: "Nagano", description: "Witness a dramatic and historic festival held every January 15th, where villagers build and then burn a massive wooden shrine. It's a spectacular but very cold event.", price: "Free to attend", supplier: "Nozawa Onsen Tourism Association", booking: "N/A (public event), but accommodation books out years in advance." },
+                { name: "Mino Washi Paper Making (美濃和紙製作)", category: "Culture & History", prefecture: "Gifu", description: "Learn the traditional art of making Mino Washi, a delicate and durable paper with a 1300-year history, designated as a UNESCO Intangible Cultural Heritage.", price: "¥1,000-¥2,500 (~£5-£13) per workshop", supplier: "Mino Washi Akari Art Gallery, Mino Washi Museum", booking: "Walk-in or pre-book for groups on their respective websites." },
+                { name: "Tokoname Pottery Experience (常滑燒體驗)", category: "Culture & History", prefecture: "Aichi", description: "Create your own unique pottery piece in Tokoname, one of Japan's oldest pottery towns. Make a Maneki-neko or try throwing a teapot on a wheel.", price: "¥2,000-¥5,000 (~£11-£27) per session", supplier: "Tokoname Ceramic Art Institute, various local studios (e.g., INAX Live Museum)", booking: "Often walk-in for simpler workshops, pre-booking for more intensive classes." },
+                { name: "Matcha Making in Nishio (西尾抹茶體驗)", category: "Food & Drink", prefecture: "Aichi", description: "Participate in a traditional matcha tea ceremony and learn to grind your own matcha from tea leaves in Nishio, a major production center for powdered green tea.", price: "¥1,500-¥3,000 (~£8-£16) per person", supplier: "Saijoji Temple, Aoi Chaya (near Nishio Castle)", booking: "Usually walk-in for standard ceremonies, pre-booking recommended for larger groups or special experiences." },
+                { name: "Alps Azumino National Park Illumination (阿爾卑斯安曇野公園燈光秀)", category: "Seasonal Events", prefecture: "Nagano", description: "Experience one of Japan's largest winter illuminations at Alps Azumino National Park, with millions of LED lights creating magical landscapes.", price: "¥450 (~£2.40) adult admission; illuminations are seasonal (Nov-Jan)", supplier: "Alps Azumino National Park", booking: "Purchase tickets on-site." },
+            ],
+            itinerary: [
+                { day: 1, title: "Arrival in Nagoya & Gifu's Historical Charm", morning: "Arrive at Chubu Centrair Airport (NGO), clear customs. Take Meitetsu μ-Sky Limited Express to Nagoya Station (approx. 30-40 min, ¥1,250). Transfer to JR Tokaido Line for Gifu City (approx. 20 min, ¥280). Check into hotel in Gifu City. (Total duration: 3-4 hrs)", afternoon: "Take the Gifu Kinka-zan Ropeway to Gifu Castle (approx. 3 min ride, ¥1,000 return for ropeway & castle entry). Explore the castle and enjoy panoramic city views from Mt. Kinka. (Suggested duration: 2.5-3 hrs)", evening: "Experience Nagara River Cormorant Fishing (Ukai) on a viewing boat (seasonal, May 11 - Oct 15). Boats depart around 6:30-7:30 PM. (Suggested duration: 1.5-2 hrs, ~¥3,500-¥4,000 per person). If not in season, enjoy dinner at a riverside restaurant and see Gifu Castle illuminated." },
+                { day: 2, title: "Takayama's Edo-Period Elegance", morning: "Travel to Takayama from Gifu City by JR Hida Wide View train (approx. 2 hrs, ~¥3,000-¥4,000). Check into your Takayama hotel. Explore the Miyagawa Morning Market (until noon) for local produce and crafts. (Suggested duration: 2-3 hrs)", afternoon: "Wander through Sanmachi Suji (Old Town), admiring traditional wooden merchant houses. Visit sake breweries (e.g., Funasaka Shuzo, Hirase Shuzo) for tastings (approx. ¥300-¥500 per tasting). Browse craft shops. (Suggested duration: 3-4 hrs)", evening: "Indulge in a premium Hida Beef dinner at a local restaurant (e.g., Ajikura Tengoku, Hida Takayama Kyoya). (Suggested duration: 1.5-2 hrs, ~¥5,000-¥15,000+)." },
+                { day: 3, title: "Shirakawa-go's UNESCO Heritage & Scenic Views", morning: "Take the Nohi Bus from Takayama Bus Terminal to Shirakawa-go (approx. 50 min, ~¥2,600 one-way, advance booking essential). Explore Ogimachi village and its iconic gassho-zukuri farmhouses (e.g., Wada House, Kanda House). (Suggested duration: 3-4 hrs)", afternoon: "Walk up to the Shiroyama Viewpoint for classic panoramic photos of the village (approx. 20-min walk or shuttle bus). Explore any open-air museums or smaller trails. (Suggested duration: 2-3 hrs)", evening: "Return to Takayama by bus. Enjoy a more casual dinner in Takayama, perhaps local soba or a regional izakaya. (Optional: Overnight stay in a gassho-zukuri farmhouse in Shirakawa-go for a unique experience, requires early booking)." },
+                { day: 4, title: "Okuhida Onsen & Alpine Wonders", morning: "From Takayama, take a bus to Shinhotaka Ropeway (approx. 1 hr, ~¥2,200 one-way). Ride the double-decker ropeway to the top for breathtaking panoramic views of the Northern Japan Alps. (Suggested duration: 3-4 hrs, Ropeway return ticket: ¥3,000).", afternoon: "Travel to Hirayu Onsen (part of Okuhida Onsen area, accessible by bus from Shinhotaka Ropeway). Check into your ryokan. Relax and enjoy the outdoor onsen baths. (Suggested duration: 3-4 hrs)", evening: "Savor a traditional kaiseki (multi-course) dinner at your ryokan, featuring local seasonal ingredients. Enjoy another relaxing onsen soak before bed." },
+                { day: 5, title: "Journey to Matsumoto & Castle Exploration", morning: "From Hirayu Onsen, take a bus to Matsumoto (approx. 1.5-2 hrs, ~¥2,500). Check into your hotel near Matsumoto Station. (Suggested duration: 2-3 hrs for travel and check-in)", afternoon: "Visit Matsumoto Castle (松本城). Explore its original castle keep and grounds, known for its black exterior and beautiful reflections in the moat. (Suggested duration: 2-3 hrs, Admission: ¥700).", evening: "Stroll down Nawate-dori (Frog Street) and Nakamachi-dori (historic merchant street) for unique shops and cafes. Enjoy dinner at a local restaurant in Matsumoto, perhaps trying local Soba noodles. (Suggested duration: 2-3 hrs)." },
+                { day: 6, title: "Wasabi Farm & Azumino Countryside", morning: "Day trip to Daio Wasabi Farm (大王わさび農場) from Matsumoto (approx. 30 min by train/bus). Explore the vast wasabi fields, sample wasabi ice cream and other unique products. (Suggested duration: 2-3 hrs, Free entry).", afternoon: "Rent bicycles near Azumino-Hotaka Station and cycle through the scenic Azumino countryside, visiting art museums (e.g., Azumino Art Hills Museum) and local galleries. (Suggested duration: 3-4 hrs, Bike rental: ~¥1,000-¥2,000).", evening: "Return to Matsumoto. Enjoy a relaxing evening, perhaps trying a craft beer at a local brewery pub." },
+                { day: 7, title: "Hiking the Historic Nakasendo Trail", morning: "Travel to the Kiso Valley from Matsumoto (JR Chuo Line to Nakatsugawa/Nagiso, then local bus, approx. 1.5-2 hrs, ~¥2,000-¥3,000). Begin your hike on the Nakasendo Trail from Magome-juku to Tsumago-juku. (Suggested duration: 3-4 hrs hiking, approx. 8 km).", afternoon: "Explore the beautifully preserved post town of Tsumago-juku (妻籠宿), which feels like stepping back into the Edo period. Browse traditional shops. (Suggested duration: 1.5-2 hrs)", evening: "Option 1 (recommended): Stay in a traditional minshuku (guesthouse) in Tsumago-juku for an immersive experience, including a traditional dinner. (Book well in advance). Option 2: Return to Matsumoto/Nagano for the night if itinerary requires." },
+                { day: 8, title: "Nagano City's Spiritual Heart", morning: "Travel from Matsumoto to Nagano City (JR Shinonoi Line, approx. 50 min, ~¥1,100). Check into your hotel. Visit the revered Zenko-ji Temple (善光寺), one of Japan's most important Buddhist temples. (Suggested duration: 2.5-3 hrs, Main Hall entry: ¥600).", afternoon: "Explore the Nakamise-dori street leading to Zenko-ji, filled with souvenir shops and food stalls. Consider joining a 'Zazen' (meditation) or 'Shakyo' (sutra copying) experience at a temple lodging (shukubo) for a deeper cultural dive. (Suggested duration: 2-3 hrs, prices vary).", evening: "Savor Shinshu Soba (信州蕎麥麵), Nagano's specialty, for dinner. Explore the evening atmosphere around Nagano Station." },
+                { day: 9, title: "Snow Monkeys & Charming Onsen Towns", morning: "Day trip to Jigokudani Monkey Park (地獄谷野猿公苑) from Nagano City (approx. 45 min train/bus to Yamanouchi, then 30 min walk; ~¥1,500 one-way). Observe the wild Japanese macaques bathing in hot springs. (Suggested duration: 3-4 hrs, Park entry: ¥800).", afternoon: "Explore the charming, traditional onsen town of Shibu Onsen (渋溫泉), known for its nine public baths (you can try all nine with a special pass if staying overnight in Shibu). Enjoy a footbath or a local snack. (Suggested duration: 2-3 hrs)", evening: "Return to Nagano City. Enjoy a relaxing evening, perhaps sampling local sake or visiting a craft beer bar." },
+                { day: 10, title: "Return to Aichi: Inuyama's Historical Gems", morning: "Travel from Nagano City to Inuyama (JR Shinano Limited Express to Nagoya, then Meitetsu Inuyama Line to Inuyama, approx. 2.5-3 hrs, ~¥5,500). Check into your hotel in Inuyama or proceed to Nagoya to check in. (Suggested duration: 3-4 hrs for travel and check-in).", afternoon: "Visit Inuyama Castle (犬山城), one of Japan's oldest original castles (admission: ¥550). Explore the adjacent Urakuen Garden (有楽苑), home to a national treasure teahouse, Joan (admission: ¥1,000). (Suggested duration: 3-4 hrs)", evening: "Wander through the historic Inuyama Castle Town, browsing souvenir shops and enjoying dinner at a traditional eatery. Consider staying at a ryokan in Inuyama for a relaxing evening." },
+                { day: 11, title: "Nagoya's Industrial & Modern Side", morning: "Visit the Toyota Commemorative Museum of Industry and Technology (トヨタ產業技術紀念館). Learn about Toyota's history from textile machinery to automobiles. (Suggested duration: 3-4 hrs, Admission: ¥500).", afternoon: "Explore the bustling Sakae (榮) district, Nagoya's main shopping and entertainment hub. Ascend the Chubu Electric Power MIRAI TOWER (中部電力未來塔) for panoramic city views (admission: ¥900). (Suggested duration: 3-4 hrs)", evening: "Experience Nagoya's vibrant nightlife. Try local specialty Tebasaki (炸雞翅 - crispy chicken wings) at an izakaya like Sekai no Yamachan or Furaibo. (Dinner & drinks: ¥3,000-¥6,000+)." },
+                { day: 12, title: "Nagoya: Culture, Shopping & Cuisine", morning: "Visit Atsuta Jingu Shrine (熱田神宮), one of Japan's most important Shinto shrines, housing a sacred sword. Explore its peaceful grounds. (Suggested duration: 1.5-2 hrs, Free entry).", afternoon: "Immerse yourself in the eclectic atmosphere of Osu Kannon (大須觀音) Temple and its lively Osu Shopping Arcade. Discover vintage clothing, anime goods, and street food. (Suggested duration: 3-4 hrs)", evening: "Indulge in Hitsumabushi (鰻魚飯三吃 - grilled eel), a famous Nagoya delicacy, at a renowned restaurant (e.g., Atsuta Horaiken). (Dinner: ¥3,000-¥5,000+)." },
+                { day: 13, title: "Day Trip to Tokoname or Ghibli Park", morning: "Option 1 (Pottery Lovers): Day trip to Tokoname (常滑) by Meitetsu train (approx. 45 min, ~¥700 one-way). Explore the Pottery Footpath, visit ceramic studios, and see the giant Maneki-neko. (Suggested duration: 4-5 hrs). Option 2 (Ghibli Fans): Visit Ghibli Park (吉卜力公園) within Expo 2005 Aichi Commemorative Park by subway/Linimo (requires pre-booked tickets, book months in advance!). (Suggested duration: Full day).", afternoon: "Continue exploration of chosen destination. Enjoy shopping for unique pottery in Tokoname or immerse yourself further in Ghibli's world.", evening: "Farewell dinner in Nagoya, perhaps revisiting a favorite Nagoya Meshi spot or exploring a new cuisine." },
+                { day: 14, title: "Departure from Chubu", morning: "Enjoy a leisurely breakfast. If time permits, do some last-minute souvenir shopping at JR Nagoya Station's numerous shops (e.g., Meitetsu Department Store, Takashimaya). (Suggested duration: 1-2 hrs)", afternoon: "Take the Meitetsu μ-Sky Limited Express from Nagoya Station to Chubu Centrair International Airport (NGO) for your departure. (Approx. 30-40 min, ~¥1,250).", evening: "" },
+            ],
+            accommodations: [
+                { name: "Auberge Hidanomori", prefecture: "Gifu", type: "Wellness & Unique", room_types: "Elegant Japanese-style rooms (likely futons)", price_gbp: "190-250", price_jpy: "37,830-40,000", rating: 9.7, features: "Renovated 2022, excellent meals, wine pairings, shuttle." },
+                { name: "SOY", prefecture: "Gifu", type: "Wellness & Unique", room_types: "Traditional Japanese (tatami, futons)", price_gbp: "160-220", price_jpy: "25,000-35,000", rating: 9.9, features: "Authentic traditional house, beautiful garden, personalized service." },
+                { name: "Ryokan Kaminaka", prefecture: "Gifu", type: "Wellness & Unique", room_types: "Traditional Japanese (tatami, futons)", price_gbp: "140-200", price_jpy: "22,000-32,000", rating: 9.5, features: "Historic cultural asset, in-room Kaiseki dinners, public baths." },
+                { name: "Hotel Wood Takayama", prefecture: "Gifu", type: "Hotel", room_types: "Modern Japanese/Western (Double/Twin)", price_gbp: "110-160", price_jpy: "17,000-25,000", rating: 9.1, features: "Modern design, onsen, free sake tasting, coin laundry." },
+                { name: "Relax Hotel Takayama Station", prefecture: "Gifu", type: "Hotel", room_types: "Spacious Western-style (Double/Twin)", price_gbp: "120-180", price_jpy: "19,000-28,000", rating: 9.2, features: "Full kitchenware, drinks in fridge, close to station." },
+                { name: "THE MACHIYA HOTEL TAKAYAMA", prefecture: "Gifu", type: "Hotel", room_types: "Modern Japanese/Western (Double/Twin)", price_gbp: "135-200", price_jpy: "21,000-31,000", rating: 9.1, features: "New modern design, complimentary tea/coffee, garden." },
+                { name: "eph TAKAYAMA", prefecture: "Gifu", type: "Hotel", room_types: "Western-style (Double/Twin), some with views", price_gbp: "100-150", price_jpy: "16,000-24,000", rating: 9.1, features: "Modern 4-star, good views, close to historic area." },
+                { name: "昔の暮らし体験 - Samurai-era house - みのり家", prefecture: "Gifu", type: "Wellness & Unique", room_types: "Entire Samurai-era house (traditional futons)", price_gbp: "220-350", price_jpy: "35,000-55,000", rating: 9.8, features: "Authentic historical house, owner stories, immersive experience." },
+                { name: "飛騨高山浮世絵INN画侖", prefecture: "Gifu", type: "Hotel", room_types: "Western-style beds with Japanese aesthetic", price_gbp: "190-300", price_jpy: "30,000-47,000", rating: 9.7, features: "Art-themed hotel, dedicated theater room, unique bathroom." },
+                { name: "Oyado Koto No Yume", prefecture: "Gifu", type: "Wellness & Unique", room_types: "Japanese-style (tatami, futons) with colorful design", price_gbp: "150-230", price_jpy: "24,000-36,000", rating: 9.1, features: "Authentic inn, hospitable staff, great location near station." },
+                { name: "Iroriyado Hidaya", prefecture: "Gifu", type: "Hotel", room_types: "Modern Japanese style", price_gbp: "160-250", price_jpy: "25,000-40,000", rating: 9.6, features: "Recently renovated, high quality service, traditional feel." },
+                { name: "Residence Hotel Takayama Station", prefecture: "Gifu", type: "Apartment", room_types: "Western-style (Double/Twin), suitable for groups", price_gbp: "96-150", price_jpy: "19,110-24,000", rating: 9.1, features: "Fitness center, terrace, good for groups, near station." },
+                { name: "Wanosato (白川鄉合掌屋)", prefecture: "Gifu", type: "Wellness & Unique", room_types: "Traditional minka/Gassho-zukuri (futons)", price_gbp: "250-500+", price_jpy: "40,000-80,000+", rating: 9.0, features: "Historic gassho-zukuri farmhouse, nature retreat, local food." },
+                { name: "Daiwa Roynet Hotel Gifu", prefecture: "Gifu", type: "Hotel", room_types: "Western-style (Double/Twin)", price_gbp: "75-120", price_jpy: "12,000-19,000", rating: 8.5, features: "Modern amenities, well-located near Gifu Station." },
+                { name: "Miyako Hotel Gifu Nagaragawa", prefecture: "Gifu", type: "Hotel", room_types: "Western-style (Double/Twin), some with river/castle views", price_gbp: "100-180", price_jpy: "16,000-28,000", rating: 8.6, features: "Rooftop onsen with Gifu Castle view, scenic location." },
+
+                { name: "Nikko Style Nagoya", prefecture: "Aichi", type: "Hotel", room_types: "Spacious King/Twin rooms, suite-like", price_gbp: "110-170", price_jpy: "17,000-27,000", rating: 9.1, features: "Spacious modern rooms, exceptional service, unique coffee blend." },
+                { name: "The Royal Park Hotel Iconic Nagoya", prefecture: "Aichi", type: "Hotel", room_types: "Large Western-style rooms", price_gbp: "130-200", price_jpy: "21,000-31,000", rating: 8.9, features: "Luxury experience, direct shopping access, city views." },
+                { name: "Courtyard by Marriott Nagoya", prefecture: "Aichi", type: "Hotel", room_types: "Large Twin/Double beds", price_gbp: "110-170", price_jpy: "17,000-27,000", rating: 8.8, features: "Comfortable, highly rated for families/couples, good breakfast." },
+                { name: "Hotel Keihan Nagoya", prefecture: "Aichi", type: "Hotel", room_types: "Spacious, clean Western-style rooms", price_gbp: "60-100", price_jpy: "9,500-16,000", rating: 8.5, features: "Good value, quality amenities, near nightlife." },
+                { name: "Mitsui Garden Hotel Nagoya Premier", prefecture: "Aichi", type: "Hotel", room_types: "Modern, comfortable Western-style rooms", price_gbp: "105-160", price_jpy: "16,500-25,000", rating: 8.5, features: "Public hot bath with city views, convenient station access." },
+                { name: "Dormy Inn Premium Nagoya Sakae", prefecture: "Aichi", type: "Hotel", room_types: "Modern Western-style rooms", price_gbp: "90-140", price_jpy: "14,000-22,000", rating: 8.5, features: "Natural hot spring bath, free ramen/ice cream, opened 2015." },
+                { name: "The Royal Park Canvas Nagoya", prefecture: "Aichi", type: "Hotel", room_types: "Renovated Single/Double/Twin", price_gbp: "80-130", price_jpy: "12,500-20,500", rating: 8.2, features: "Renovated rooms, public bath, high security." },
+                { name: "Hotel Trusty Nagoya Shirakawa", prefecture: "Aichi", type: "Hotel", room_types: "Western-style (Double/Twin), some with balcony", price_gbp: "60-100", price_jpy: "9,500-16,000", rating: 8.6, features: "Highly-rated breakfast, located above shopping mall." },
+                { name: "GOLD STAY Nagoya Osu", prefecture: "Aichi", type: "Apartment", room_types: "Family rooms, spacious (kitchen/lounge)", price_gbp: "145-220", price_jpy: "23,000-35,000", rating: 9.2, features: "Recently renovated, family-friendly, full kitchen amenities." },
+                { name: "ペットも泊まれる小さなお宿虎凜Korin", prefecture: "Aichi", type: "Apartment", room_types: "1-bedroom apartment with full kitchen", price_gbp: "330-500", price_jpy: "52,000-79,000", rating: 10.0, features: "Pet-friendly, fully equipped, toys for children, exceptional host service." },
+                { name: "GRAND BASE Nagoya Ekinishi", prefecture: "Aichi", type: "Apartment", room_types: "Spacious apartments with multiple beds (e.g., four full beds)", price_gbp: "200-300", price_jpy: "31,500-47,000", rating: 8.6, features: "Very spacious, ideal for groups, near Nagoya Station." },
+                { name: "GRAND BASE Osu", prefecture: "Aichi", type: "Apartment", room_types: "Family rooms, spacious", price_gbp: "195-290", price_jpy: "30,500-45,500", rating: 8.6, features: "Peaceful, convenient parking, close to Osu Kannon Temple." },
+                { name: "2F Daiyoshiya Main House", prefecture: "Aichi", type: "Wellness & Unique", room_types: "3-story whole house rental (traditional Japanese rooms)", price_gbp: "100-250", price_jpy: "15,000-40,000", rating: 4.9, features: "Newly built (2020) traditional style, spacious, kitchen." },
+                { name: "Hotel Indigo Inuyama Urakuen Garden by IHG", prefecture: "Aichi", type: "Hotel", room_types: "Standard/Premium King/Twin (castle/river/teahouse views)", price_gbp: "120-250", price_jpy: "19,000-40,000", rating: 8.8, features: "Built 2022, luxury, scenic views, pet-friendly." },
+                { name: "HOTEL μ STYLE INUYAMA experience", prefecture: "Aichi", type: "Hotel", room_types: "Western-style rooms", price_gbp: "65-110", price_jpy: "10,000-17,000", rating: 8.7, features: "Convenient location at station, offers onsen." },
+
+                { name: "Onyado Nono Matsumoto Natural Hot Spring", prefecture: "Nagano", type: "Hotel", room_types: "Double, Queen, Twin, Comfort Twin (tatami flooring)", price_gbp: "120-180", price_jpy: "19,000-28,000", rating: 9.1, features: "Natural hot spring baths, free nighttime ramen/ice cream." },
+                { name: "Hotel Metropolitan Nagano", prefecture: "Nagano", type: "Hotel", room_types: "Elegantly decorated Western-style rooms", price_gbp: "75-120", price_jpy: "12,000-19,000", rating: 8.8, features: "Directly next to Nagano Station, spacious rooms." },
+                { name: "Kokusai 21 International Hotel", prefecture: "Nagano", type: "Hotel", room_types: "Contemporary Western-style rooms", price_gbp: "85-130", price_jpy: "13,500-20,500", rating: 8.4, features: "High-quality Italian and Chinese restaurants." },
+                { name: "Sotetsu Fresa Inn Nagano-Zenkojiguchi", prefecture: "Nagano", type: "Hotel", room_types: "Single, Double, Twin, Superior Twin", price_gbp: "45-80", price_jpy: "7,000-12,500", rating: 8.5, features: "Excellent value and location near station/temple." },
+                { name: "Hotel Courtland Nagano", prefecture: "Nagano", type: "Hotel", room_types: "Western-style rooms", price_gbp: "40-75", price_jpy: "6,500-12,000", rating: 8.0, features: "Budget-friendly, very central, Japanese/Western breakfast." },
+                { name: "Popotel one", prefecture: "Nagano", type: "Wellness & Unique", room_types: "3-bedroom whole house rental (Japanese-style, bunk beds)", price_gbp: "100-200", price_jpy: "15,000-30,000", rating: 4.87, features: "Historic 100-year-old house, Matsumoto Castle view, antiques." },
+                { name: "Sanchi, a private rental inn", prefecture: "Nagano", type: "Wellness & Unique", room_types: "Whole-house rental", price_gbp: "150-300", price_jpy: "23,000-47,000", rating: 4.9, features: "Renovated traditional building, panoramic Alps views, river activities." },
+                { name: "Nagano Kisoji House", prefecture: "Nagano", type: "Wellness & Unique", room_types: "Whole-house rental", price_gbp: "200-400", price_jpy: "30,000-60,000", rating: 4.94, features: "Luxurious 1931 renovated house, private, near Narai-juku." },
+                { name: "mökki STARDUST GLAMPING achi village", prefecture: "Nagano", type: "Wellness & Unique", room_types: "Various dome tents & suite villas (2-6 person capacity)", price_gbp: "200-500+", price_jpy: "30,000-80,000+", rating: 4.99, features: "Luxury glamping, best starry sky, tent saunas, all-inclusive drinks." },
+            ],
+            budgeting: {
+                budget: { accommodation: 35, food: 25, transport: 20, activities: 15, other: 5 },
+                mid: { accommodation: 40, food: 30, transport: 15, activities: 10, other: 5 },
+                luxury: { accommodation: 50, food: 30, transport: 10, activities: 8, other: 2 },
+            },
+             money_tips: {
+                currency: {
+                    jpy_per_gbp: 198, // Current as of late July 2025
+                    usd_per_gbp: 1.26 // Current as of late July 2025
+                },
+                general_costs: {
+                    accommodation_per_night_mid_range_jpy: "¥15,000-¥30,000",
+                    food_per_day_mid_range_jpy: "¥4,000-¥8,000",
+                    transport_per_day_mid_range_jpy: "¥2,000-¥5,000",
+                    activities_per_day_mid_range_jpy: "¥1,000-¥3,000"
+                },
+                street_food_examples: [
+                    { item: "Hida Beef Skewer (飛驒牛串燒)", location: "Takayama", price_jpy: "¥700-¥1,500" },
+                    { item: "Tebasaki (炸雞翅)", location: "Nagoya", price_jpy: "¥380-¥500 per order" },
+                    { item: "Oyaki (御燒)", location: "Matsumoto/Nagano", price_jpy: "¥190-¥300" }
+                ],
+                passes: [
+                    { name: "SHORYUDO Highway Bus Pass (昇龍道高速巴士票)", details: "3-day (¥7,000-¥8,000), 5-day (¥10,000-¥12,000). Covers unlimited bus travel in Chubu region including airport access. Ideal for accessing Shirakawa-go, Takayama, Matsumoto.", booking: "Online via Japan Bus Pass, or purchase at major bus terminals." },
+                    { name: "Japan Rail Pass", details: "National pass, but regional passes like JR East Pass (Nagano/Niigata) can be good value if combining with other regions. Check specific routes carefully.", booking: "Purchase online before arrival, exchange in Japan." },
+                    { name: "Snow Monkey Pass (雪猴通票)", details: "¥3,600 (1-day). Includes roundtrip train/bus to Jigokudani Monkey Park and entry fee.", booking: "Available at Nagano Station." }
+                ],
+                tax_free_shopping: "Look for 'Tax-Free' signs. Minimum purchase of ¥5,000 (excluding tax) at participating stores. Bring passport. Tax-free rules changing from Nov 2025 (VAT will be refunded at airport/designated points, not in-store).",
+                payment: "ATMs are widely available at convenience stores (Seven Bank, Japan Post Bank) and typically accept international cards. Credit cards are accepted in most hotels and major stores, but cash is essential for smaller shops, rural areas, and some restaurants.",
+                connectivity: "eSIMs (e.g., Airalo, Holafly) or prepaid SIM cards (e.g., Mobal, B-mobile) for data. Portable Wi-Fi devices offer more reliable connection for multiple devices.",
+                apps: "Google Maps (for navigation), Google Translate (for language), Japan Transit Planner (for train routes/timetables), Tabelog/Gurunavi (for restaurants), Klook/Viator (for tours/activities)."
+            },
+            seasonal_events: {
+                spring: [
+                    { name: "Takayama Spring Festival (高山春祭)", month: "April", prefecture: "Gifu", details: "Also known as Sanno Matsuri, one of Japan's most beautiful festivals with elaborate floats and Karakuri mechanical dolls. (Early/Mid-April)", price: "Free to view" },
+                    { name: "Ieyasu Procession (家康行列)", month: "April", prefecture: "Aichi", details: "A grand parade in Okazaki City, celebrating Tokugawa Ieyasu's entry into the castle. (Early April)", price: "Free to view" },
+                    { name: "Cherry Blossom Viewing (花見)", month: "Late March - Mid-April", prefecture: "Various", details: "Peak season across the region. Notable spots: Gifu Park (Gifu), Iwakura Gojo River (Aichi), Takato Castle Site Park (Nagano - famous, mid-April)." }
+                ],
+                summer: [
+                    { name: "Nagara River Cormorant Fishing (長良川鵜飼)", month: "May 11 - Oct 15", prefecture: "Gifu", details: "Ancient fishing tradition using trained cormorants. Evening boat tours available. (Gifu City)", price: "Boat tour: ¥3,500-¥4,000" },
+                    { name: "Gujo Odori Dance Festival (郡上舞祭)", month: "July-September", prefecture: "Gifu", details: "One of Japan's longest and most famous traditional dance festivals, lasting for 31 nights. (Gujo Hachiman)", price: "Free to participate/view" },
+                    { name: "Lake Suwa Fireworks Festival (諏訪湖花火大會)", month: "August", prefecture: "Nagano", details: "One of Japan's largest fireworks displays, spectacular show over Lake Suwa. (Mid-August)", price: "Free to view (paid seats available)" },
+                ],
+                autumn: [
+                    { name: "Korankei Momiji Festival (香嵐溪紅葉祭)", month: "November", prefecture: "Aichi", details: "Stunning autumn foliage (momiji) along the Tomoe River, often illuminated at night. (Mid-November)", price: "Free to view, parking fee" },
+                    { name: "Takayama Autumn Festival (高山秋祭)", month: "October", prefecture: "Gifu", details: "Also known as Hachiman Matsuri, similar to spring festival with floats and Karakuri dolls, but held in autumn. (Early October)", price: "Free to view" },
+                    { name: "Shinshu Matsumoto Soba Festival (信州松本蕎麥麵祭)", month: "Mid-October", prefecture: "Nagano", details: "Annual festival celebrating Nagano's famous soba noodles, with stalls from across the region. (Matsumoto)", price: "Free entry, food purchase" },
+                    { name: "Autumn Foliage Viewing (紅葉)", month: "Late Oct - Mid-Nov", prefecture: "Various", details: "Spectacular fall colors. Notable spots: Korankei (Aichi), Shinhotaka Ropeway (Gifu), Kamikochi (Nagano - early-mid Oct)." }
+                ],
+                winter: [
+                    { name: "Nabana no Sato Winter Illumination (名花之里冬季燈海)", month: "Late Oct - Early May", prefecture: "Mie (near Aichi)", details: "One of Japan's largest and most famous winter illuminations. (Nagashima)", price: "¥2,300 (includes ¥1,000 coupon)" },
+                    { name: "Nozawa Onsen Fire Festival (野澤溫泉道祖神祭)", month: "January 15", prefecture: "Nagano", details: "Dramatic fire festival for good fortune. (Nozawa Onsen)", price: "Free to view" },
+                    { name: "Nagano Lantern Festival (長野燈明まつり)", month: "February", prefecture: "Nagano", details: "Zenko-ji Temple and its surroundings are beautifully illuminated with lanterns. (Nagano City)", price: "Free to view" },
+                    { name: "Matsumoto Castle Ice Sculpture Festival (松本城冰雕節)", month: "Late January", prefecture: "Nagano", details: "Ice sculptures displayed around Matsumoto Castle.", price: "Free to view" }
+                ]
+            },
+            shopping: [
+                { name: "Osu Shopping Arcade (大須商店街)", location: "Nagoya, Aichi", type: "Eclectic Mix", description: "A vibrant, covered arcade with over 1,200 shops and restaurants. Find everything from vintage clothing and anime merchandise to electronics, traditional crafts, and international food stalls. A must-visit for its lively atmosphere and unique finds." },
+                { name: "Endoji Shopping Street (円頓寺商店街)", location: "Nagoya, Aichi", type: "Retro & Local", description: "One of Nagoya's oldest shopping streets, offering a nostalgic, retro vibe. It's less crowded than Osu and features traditional sweet shops, local eateries, and quirky independent stores. Great for a more authentic, local shopping experience." },
+                { name: "Sanmachi Suji (三町筋)", location: "Takayama, Gifu", type: "Traditional Crafts & Sake", description: "The heart of Takayama's old town, lined with beautifully preserved Edo-period buildings. Here you'll find numerous sake breweries offering tastings, shops selling local crafts like Sarubobo dolls and Shunkei lacquerware, and stalls with Hida beef snacks." },
+                { name: "Nakamachi-dori (中町通り)", location: "Matsumoto, Nagano", type: "Crafts & Antiques", description: "A charming street known for its distinctive black-and-white 'kura' (storehouse) style buildings. It's home to a variety of shops specializing in local crafts, pottery, lacquerware, and antiques. A great place to find high-quality, unique souvenirs." },
+                { name: "Tokoname Pottery Path (常滑やきもの散歩道)", location: "Tokoname, Aichi", type: "Pottery & Ceramics", description: "A walking course through the historic pottery town of Tokoname. The path is lined with ceramic studios, galleries, and shops where you can buy everything from traditional teapots to modern ceramic art. You can even see walls made of old shochu bottles and ceramic pipes." },
+                { name: "Depachika (デパ地下)", location: "Major Cities (e.g., Nagoya)", type: "Gourmet Food Halls", description: "The basement floors of major department stores (like Takashimaya at Nagoya Station or Matsuzakaya in Sakae) are treasure troves of gourmet food. Find beautifully packaged sweets, high-end bento boxes, local delicacies, and free samples. A fantastic place to shop for food gifts." }
+            ]
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('.section');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            function showSection(sectionId) {
+                sections.forEach(section => {
+                    section.classList.remove('active');
+                });
+                document.getElementById(sectionId).classList.add('active');
+                
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if(link.dataset.section === sectionId) {
+                        link.classList.add('active');
+                    }
+                });
+                mobileMenu.classList.add('hidden');
+            }
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const sectionId = e.target.dataset.section;
+                    showSection(sectionId);
+                });
+            });
+
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            
+            document.querySelectorAll('[data-prefecture]').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    const prefectureId = e.currentTarget.dataset.prefecture;
+                    showSection('destinations');
+                    renderDestinationContent(prefectureId);
+                    document.querySelector(`[data-prefecture-tab="${prefectureId}"]`).click();
+                });
+            });
+
+            setupDestinations();
+            setupExperiences();
+            setupItinerary();
+            setupSeasonalGuide();
+            setupTools();
+            
+            renderDestinationContent('gifu');
+            renderExperiencesGrid('all');
+            renderItinerary();
+            renderSeasonalGrid('all');
+            renderAccommodationTool();
+            renderTransportTool();
+            renderShoppingTool();
+            renderBudgetTool();
+            renderTipsTool();
+            
+            const modalClose = document.getElementById('modal-close');
+            modalClose.addEventListener('click', () => {
+                document.getElementById('details-modal').classList.add('hidden');
+            });
+        });
+
+        function setupDestinations() {
+            const tabs = document.querySelectorAll('[data-prefecture-tab]');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    tabs.forEach(t => {
+                        t.classList.remove('active', 'bg-[#81B29A]', 'text-white');
+                        t.classList.add('bg-white');
+                    });
+                    e.target.classList.add('active', 'bg-[#81B29A]', 'text-white');
+                    e.target.classList.remove('bg-white');
+                    renderDestinationContent(e.target.dataset.prefectureTab);
+                });
+            });
+        }
+
+        function renderDestinationContent(prefectureId) {
+            const content = data.destinations[prefectureId];
+            const container = document.getElementById('destinations-content');
+            let attractionsHtml = content.attractions.map(attraction => `
+                <div class="card p-4 text-center">
+                    <div class="text-4xl mb-2">${attraction.icon}</div>
+                    <h4 class="font-bold text-lg">${attraction.name}</h4>
+                    <p class="text-sm text-gray-600">${attraction.description}</p>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="card p-6 mb-8">
+                    <h3 class="text-2xl font-bold mb-2">${content.name}</h3>
+                    <p class="text-gray-700">${content.summary}</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    ${attractionsHtml}
+                </div>
+            `;
+        }
+
+        function setupExperiences() {
+            const filters = document.querySelectorAll('[data-experience-filter]');
+            filters.forEach(filter => {
+                filter.addEventListener('click', (e) => {
+                    filters.forEach(f => {
+                        f.classList.remove('active', 'bg-[#E07A5F]', 'text-white');
+                        f.classList.add('bg-white');
+                    });
+                    e.target.classList.add('active', 'bg-[#E07A5F]', 'text-white');
+                    e.target.classList.remove('bg-white');
+                    renderExperiencesGrid(e.target.dataset.experienceFilter);
+                });
+            });
+        }
+
+        function renderExperiencesGrid(filter) {
+            const container = document.getElementById('experiences-grid');
+            const filteredExperiences = filter === 'all' 
+                ? data.experiences 
+                : data.experiences.filter(exp => exp.category === filter);
+
+            container.innerHTML = filteredExperiences.map(exp => `
+                <div class="card p-6">
+                    <h4 class="font-bold text-xl mb-2">${exp.name}</h4>
+                    <p class="text-gray-600 mb-4">${exp.description}</p>
+                    <div class="text-sm">
+                        <span class="font-semibold bg-gray-200 text-gray-800 px-2 py-1 rounded-full">${exp.prefecture}</span>
+                        <span class="font-semibold bg-[#81B29A] text-white px-2 py-1 rounded-full ml-2">${exp.category}</span>
+                        ${exp.price ? `<span class="font-semibold text-gray-700 ml-2">Price: ${exp.price}</span>` : ''}
+                        <button class="text-[#E07A5F] hover:underline ml-2" onclick="showExperienceDetails('${exp.name.replace(/'/g, "\\'")}')">Details</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function showExperienceDetails(expName) {
+            const exp = data.experiences.find(e => e.name === expName);
+            if (!exp) return;
+
+            const modalTitle = document.getElementById('modal-title');
+            const modalContent = document.getElementById('modal-content');
+            const detailsModal = document.getElementById('details-modal');
+
+            modalTitle.textContent = exp.name;
+            modalContent.innerHTML = `
+                <p class="mb-2 text-gray-700">${exp.description}</p>
+                <p class="mb-2"><strong class="text-[#3D405B]">Prefecture:</strong> ${exp.prefecture}</p>
+                <p class="mb-2"><strong class="text-[#3D405B]">Category:</strong> ${exp.category}</p>
+                ${exp.price ? `<p class="mb-2"><strong class="text-[#3D405B]">Estimated Price:</strong> ${exp.price}</p>` : ''}
+                ${exp.supplier ? `<p class="mb-2"><strong class="text-[#3D405B]">Reputable Supplier:</strong> ${exp.supplier}</p>` : ''}
+                ${exp.booking ? `<p><strong class="text-[#3D405B]">How to Book:</strong> ${exp.booking}</p>` : ''}
+            `;
+            detailsModal.classList.remove('hidden');
+            detailsModal.classList.add('flex');
+        }
+
+        function setupItinerary() {
+            document.getElementById('itinerary-timeline').addEventListener('click', function(e) {
+                if (e.target.closest('.itinerary-day-header')) {
+                    const header = e.target.closest('.itinerary-day-header');
+                    const content = header.nextElementSibling;
+                    content.classList.toggle('hidden');
+                    header.querySelector('svg').classList.toggle('rotate-180');
+                }
+                if (e.target.classList.contains('plan-checkbox')) {
+                    updateMyPlanSummary();
+                }
+            });
+        }
+
+        function renderItinerary() {
+            const container = document.getElementById('itinerary-timeline');
+            container.innerHTML = data.itinerary.map((day, index) => `
+                <div class="timeline-item relative mb-8">
+                    <div class="timeline-line"></div>
+                    <div class="itinerary-day-header cursor-pointer flex justify-between items-center p-4 bg-white rounded-lg shadow">
+                        <h4 class="font-bold text-lg text-[#3D405B]">Day ${day.day}: ${day.title}</h4>
+                        <svg class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div class="itinerary-day-content hidden mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <ul class="space-y-4">
+                            ${day.morning ? `<li><label class="flex items-start"><input type="checkbox" class="plan-checkbox mt-1 mr-3" data-day="${day.day}" data-activity="Day ${day.day} Morning: ${day.morning}"><span class="font-semibold">Morning:</span> ${day.morning}</label></li>` : ''}
+                            ${day.afternoon ? `<li><label class="flex items-start"><input type="checkbox" class="plan-checkbox mt-1 mr-3" data-day="${day.day}" data-activity="Day ${day.day} Afternoon: ${day.afternoon}"><span class="font-semibold">Afternoon:</span> ${day.afternoon}</label></li>` : ''}
+                            ${day.evening ? `<li><label class="flex items-start"><input type="checkbox" class="plan-checkbox mt-1 mr-3" data-day="${day.day}" data-activity="Day ${day.day} Evening: ${day.evening}"><span class="font-semibold">Evening:</span> ${day.evening}</label></li>` : ''}
+                        </ul>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function updateMyPlanSummary() {
+            const summaryContainer = document.getElementById('my-plan-summary');
+            const list = document.getElementById('my-plan-list');
+            const placeholder = document.getElementById('my-plan-placeholder');
+            const checkedItems = document.querySelectorAll('.plan-checkbox:checked');
+            
+            list.innerHTML = '';
+            if (checkedItems.length > 0) {
+                summaryContainer.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                let dayGroups = {};
+                checkedItems.forEach(item => {
+                    const day = item.dataset.day;
+                    if (!dayGroups[day]) {
+                        dayGroups[day] = [];
+                    }
+                    dayGroups[day].push(item.dataset.activity);
+                });
+
+                Object.keys(dayGroups).sort((a,b) => parseInt(a) - parseInt(b)).forEach(day => {
+                    const dayHeader = document.createElement('li');
+                    dayHeader.innerHTML = `<strong class="text-[#3D405B]">Day ${day}</strong>`;
+                    dayHeader.className = 'pt-2';
+                    list.appendChild(dayHeader);
+                    dayGroups[day].forEach(activity => {
+                        const li = document.createElement('li');
+                        li.textContent = activity.split(': ').slice(1).join(': ');
+                        li.className = 'pl-4 text-gray-700';
+                        list.appendChild(li);
+                    });
+                });
+            } else {
+                summaryContainer.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+        }
+
+        function setupSeasonalGuide() {
+            const filters = document.querySelectorAll('[data-season-filter]');
+            filters.forEach(filter => {
+                filter.addEventListener('click', (e) => {
+                    filters.forEach(f => {
+                        f.classList.remove('active', 'bg-[#E07A5F]', 'text-white');
+                        f.classList.add('bg-white');
+                    });
+                    e.target.classList.add('active', 'bg-[#E07A5F]', 'text-white');
+                    e.target.classList.remove('bg-white');
+                    renderSeasonalGrid(e.target.dataset.seasonFilter);
+                });
+            });
+        }
+
+        function renderSeasonalGrid(season) {
+            const container = document.getElementById('seasonal-grid');
+            const events = season === 'all' ? 
+                [...data.seasonal_events.spring, ...data.seasonal_events.summer, ...data.seasonal_events.autumn, ...data.seasonal_events.winter] : 
+                data.seasonal_events[season];
+            
+            container.innerHTML = events.map(event => `
+                <div class="card p-6">
+                    <h4 class="font-bold text-xl mb-2">${event.name}</h4>
+                    <p class="text-gray-600 mb-4">${event.details}</p>
+                    <div class="text-sm">
+                        <span class="font-semibold bg-gray-200 text-gray-800 px-2 py-1 rounded-full">${event.prefecture}</span>
+                        <span class="font-semibold bg-[#81B29A] text-white px-2 py-1 rounded-full ml-2">${event.month}</span>
+                        ${event.price ? `<span class="font-semibold text-gray-700 ml-2">${event.price}</span>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function setupTools() {
+            const tabs = document.querySelectorAll('.tools-tab-btn');
+            const contents = document.querySelectorAll('.tool-content');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', e => {
+                    tabs.forEach(t => t.classList.remove('border-[#E07A5F]', 'text-[#E07A5F]', 'border-b-4'));
+                    contents.forEach(c => c.classList.add('hidden'));
+
+                    e.target.classList.add('border-[#E07A5F]', 'text-[#E07A5F]', 'border-b-4');
+                    document.getElementById(`${e.target.dataset.toolstab}-tool`).classList.remove('hidden');
+                });
+            });
+            tabs[0].click();
+        }
+        
+        let accommodationChart;
+        function renderAccommodationTool() {
+            const container = document.getElementById('accommodation-tool');
+            container.innerHTML = `
+                <div class="card p-6">
+                    <div class="md:flex md:space-x-8">
+                        <div class="md:w-1/2">
+                            <h3 class="text-2xl font-semibold mb-4">Find Your Stay</h3>
+                            <div class="space-y-4 mb-6">
+                                <div>
+                                    <label class="font-semibold">Prefecture:</label>
+                                    <select id="acc-prefecture-filter" class="w-full mt-1 p-2 border rounded-md">
+                                        <option value="all">All</option>
+                                        <option value="Gifu">Gifu</option>
+                                        <option value="Aichi">Aichi</option>
+                                        <option value="Nagano">Nagano</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="font-semibold">Type:</label>
+                                    <select id="acc-type-filter" class="w-full mt-1 p-2 border rounded-md">
+                                        <option value="all">All Types</option>
+                                        <option value="Hotel">Hotel</option>
+                                        <option value="Apartment">Apartment</option>
+                                        <option value="Wellness & Unique">Wellness & Unique</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="accommodation-list" class="space-y-4 max-h-96 overflow-y-auto pr-2"></div>
+                        </div>
+                        <div class="md:w-1/2 mt-8 md:mt-0">
+                             <h3 class="text-2xl font-semibold mb-4 text-center">Average Price by Prefecture</h3>
+                             <div class="chart-container">
+                                <canvas id="accommodation-chart"></canvas>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const prefectureFilter = document.getElementById('acc-prefecture-filter');
+            const typeFilter = document.getElementById('acc-type-filter');
+            
+            prefectureFilter.addEventListener('change', updateAccommodationDisplay);
+            typeFilter.addEventListener('change', updateAccommodationDisplay);
+            
+            updateAccommodationDisplay();
+        }
+
+        function updateAccommodationDisplay() {
+            const prefecture = document.getElementById('acc-prefecture-filter').value;
+            const type = document.getElementById('acc-type-filter').value;
+            
+            const filtered = data.accommodations.filter(acc => 
+                (prefecture === 'all' || acc.prefecture === prefecture) &&
+                (type === 'all' || acc.type === type)
+            );
+            
+            const listContainer = document.getElementById('accommodation-list');
+            if (filtered.length > 0) {
+                listContainer.innerHTML = filtered.map(acc => {
+                    return `
+                        <div class="p-4 border rounded-lg bg-gray-50">
+                            <h4 class="font-bold text-lg">${acc.name} <span class="text-sm font-normal text-gray-500">- ${acc.prefecture}</span></h4>
+                            <p class="text-sm text-gray-600">${acc.features}</p>
+                            <p class="text-xs text-gray-500">Room Types: ${acc.room_types}</p>
+                            <div class="flex justify-between items-center mt-2 text-sm">
+                                <span class="font-semibold bg-blue-100 text-blue-800 px-2 py-1 rounded-full">${acc.type}</span>
+                                <div>
+                                    <span class="font-bold text-[#E07A5F]">${acc.rating} ★</span>
+                                    <span class="ml-2 font-bold text-[#3D405B]">£${acc.price_gbp}</span>
+                                    <span class="ml-1 text-gray-500">/ ¥${acc.price_jpy}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                listContainer.innerHTML = `<p class="text-gray-500">No accommodations match your criteria.</p>`;
+            }
+            
+            updateAccommodationChart(filtered);
+        }
+
+        function updateAccommodationChart(filteredData) {
+             const ctx = document.getElementById('accommodation-chart').getContext('2d');
+             
+             const prices = { Gifu: [], Aichi: [], Nagano: [] };
+             filteredData.forEach(acc => {
+                if (prices[acc.prefecture]) {
+                    const gbpRange = acc.price_gbp.split('-').map(s => parseFloat(s.replace('£', '').replace('+', '')));
+                    const avgGbp = gbpRange.length === 2 ? (gbpRange[0] + gbpRange[1]) / 2 : gbpRange[0];
+                    prices[acc.prefecture].push(avgGbp);
+                }
+             });
+
+             const labels = Object.keys(prices);
+             const chartData = labels.map(label => {
+                const arr = prices[label];
+                if (arr.length === 0) return 0;
+                const sum = arr.reduce((a, b) => a + b, 0);
+                return sum / arr.length;
+             });
+
+             if (accommodationChart) {
+                accommodationChart.destroy();
+             }
+             
+             accommodationChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Average Price (£) per Night',
+                        data: chartData,
+                        backgroundColor: ['#81B29A', '#E07A5F', '#F2CC8F'],
+                        borderColor: ['#6a947d', '#c76851', '#d9b680'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Average Price (£)' },
+                            max: Math.max(...chartData) * 1.2 || 250
+                        },
+                        x: {
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    const label = this.getLabelForValue(value);
+                                    if (label.length > 16) {
+                                        return label.split(' ').map(word => word.length > 8 ? word.match(/.{1,8}/g) : word).flat();
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Avg. Price: £${context.parsed.y.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+             });
+        }
+
+        function renderTransportTool() {
+            const container = document.getElementById('transport-tool');
+            container.innerHTML = `
+                <div class="card p-6">
+                    <h3 class="text-2xl font-semibold mb-4">Getting Around Chubu</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">🚄 Trains & Shinkansen (新幹線)</h4>
+                            <p>The extensive JR network is your backbone for inter-city travel within Japan. The Tokaido Shinkansen serves Nagoya, connecting it to Tokyo and Kyoto. The Hokuriku Shinkansen links Tokyo to Nagano. While the Japan Rail Pass (全國鐵路周遊券) offers great value nationwide, consider regional passes for Chubu-specific travel. Note that the fastest Nozomi Shinkansen trains are generally not covered by the standard JR Pass, requiring a supplement.</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">🚌 Regional Buses</h4>
+                            <p>For accessing more remote, scenic destinations like Shirakawa-go (白川鄉), Kamikochi (上高地), or the historic Nakasendo Trail (中山道), regional buses are often essential. The <strong class="text-[#E07A5F]">SHORYUDO Highway Bus Pass (昇龍道高速巴士票)</strong> is highly recommended for value, offering unlimited bus travel over 3 or 5 days, connecting major hubs like Nagoya (名古屋), Takayama (高山), Shirakawa-go (白川鄉), and Kanazawa. Prices typically range from ¥7,000-¥12,000 (~£37-£64).</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">💳 IC Cards (Suica, Pasmo, TOICA)</h4>
+                            <p>These rechargeable smart cards (e.g., Suica, Pasmo) are invaluable for tap-and-go convenience on local trains, subways, and buses in most Japanese cities, including Nagoya. TOICA (IC卡) is the regional IC card for the Chubu area. They are also usable for small purchases at convenience stores and vending machines. Purchase one upon arrival at major stations.</p>
+                        </div>
+                         <div>
+                            <h4 class="font-bold text-lg mb-2">🚗 Car Rental</h4>
+                            <p>Renting a car offers the most flexibility, especially for exploring rural areas, onsen towns, and hidden gems not easily accessible by public transport. An International Driving Permit (IDP) issued in your home country before you travel is legally required for most foreign visitors. Remember to drive on the left side of the road! Car rentals typically cost around ¥6,000-¥12,000 (~£32-£64) per day, plus tolls and fuel.</p>
+                        </div>
+                         <div>
+                            <h4 class="font-bold text-lg mb-2">⛴️ Ferries & Boats</h4>
+                            <p>While less common for inter-city travel in Chubu, local ferries can provide scenic routes or access to islands. For example, a high-speed boat connects Chubu Centrair Airport (NGO) directly to Tsu (三重縣) in Mie Prefecture. Longer ferries like Taiheiyo Ferry connect Nagoya to Sendai and Tomakomai for those extending their journey to Hokkaido.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderShoppingTool() {
+            const container = document.getElementById('shopping-tool');
+            container.innerHTML = `
+                <div class="card p-6">
+                    <h3 class="text-2xl font-semibold mb-4">Unique Shopping Experiences</h3>
+                    <p class="text-gray-600 mb-6">Beyond the big department stores, Chubu offers a wealth of unique shopping opportunities. Explore these streets and markets to find authentic crafts, local delicacies, and one-of-a-kind souvenirs.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        ${data.shopping.map(item => `
+                            <div class="p-4 border rounded-lg bg-gray-50">
+                                <h4 class="font-bold text-lg">${item.name}</h4>
+                                <p class="text-sm font-semibold text-gray-500 mb-2">${item.location} - <span class="text-[#E07A5F]">${item.type}</span></p>
+                                <p class="text-sm text-gray-700">${item.description}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        let budgetChart;
+        function renderBudgetTool() {
+            const container = document.getElementById('budget-tool');
+            container.innerHTML = `
+                <div class="card p-6">
+                    <div class="md:flex md:space-x-8 items-center">
+                        <div class="md:w-1/2">
+                            <h3 class="text-2xl font-semibold mb-4">Budget Estimator</h3>
+                            <p class="mb-4 text-gray-600">Select your travel style to see a sample budget breakdown for your trip. This helps visualize where your money might go. Estimates are per person per day.</p>
+                            <div class="flex justify-center space-x-2 mb-6">
+                                <button class="budget-style-btn filter-btn active bg-[#E07A5F] text-white px-4 py-2 rounded-full font-semibold" data-style="mid">Mid-Range</button>
+                                <button class="budget-style-btn filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-style="budget">Budget</button>
+                                <button class="budget-style-btn filter-btn bg-white px-4 py-2 rounded-full font-semibold" data-style="luxury">Luxury</button>
+                            </div>
+                            <div class="text-sm text-gray-700 mt-4 space-y-1">
+                                <h4 class="font-bold text-base">Estimated Daily Costs (per person):</h4>
+                                <p><strong>Budget:</strong> £50-£90 / ¥8,000-¥14,000</p>
+                                <p><strong>Mid-Range:</strong> £90-£150 / ¥14,000-¥24,000</p>
+                                <p><strong>Luxury:</strong> £150+ / ¥24,000+</p>
+                                <p class="text-xs text-gray-500 mt-2">These are general estimates. Actual costs vary by activities, dining choices, and specific accommodation. Flight costs are excluded.</p>
+                            </div>
+                        </div>
+                        <div class="md:w-1/2 mt-8 md:mt-0">
+                            <div class="chart-container">
+                                <canvas id="budget-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.querySelectorAll('.budget-style-btn').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    document.querySelectorAll('.budget-style-btn').forEach(b => {
+                        b.classList.remove('active', 'bg-[#E07A5F]', 'text-white');
+                        b.classList.add('bg-white');
+                    });
+                    e.target.classList.add('active', 'bg-[#E07A5F]', 'text-white');
+                    e.target.classList.remove('bg-white');
+                    updateBudgetChart(e.target.dataset.style);
+                });
+            });
+            
+            updateBudgetChart('mid');
+        }
+        
+        function updateBudgetChart(style) {
+            const ctx = document.getElementById('budget-chart').getContext('2d');
+            const budgetData = data.budgeting[style];
+            
+            if (budgetChart) {
+                budgetChart.destroy();
+            }
+            
+            budgetChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Accommodation', 'Food', 'Transport', 'Activities', 'Other'],
+                    datasets: [{
+                        data: Object.values(budgetData),
+                        backgroundColor: ['#81B29A', '#E07A5F', '#F2CC8F', '#3D405B', '#BDBDBD'],
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed + '%';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTipsTool() {
+            const container = document.getElementById('tips-tool');
+            container.innerHTML = `
+                <div class="card p-6">
+                    <h3 class="text-2xl font-semibold mb-4">Essential Tips & Phrases</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Etiquette Quick Guide</h4>
+                            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                <li><strong>Bowing:</strong> A slight nod of the head is a polite greeting.</li>
+                                <li><strong>Shoes:</strong> Remove shoes when entering homes, temples, and many traditional restaurants.</li>
+                                <li><strong>Chopsticks:</strong> Don't stick them upright in rice or pass food from chopstick to chopstick.</li>
+                                <li><strong>Tipping:</strong> Not customary in Japan.</li>
+                                <li><strong>Noise:</strong> Keep conversations quiet on public transport.</li>
+                                <li><strong>Tattoos:</strong> May be restricted from public baths (Onsen/Sento). Check policies.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Basic Japanese Phrases</h4>
+                            <ul class="space-y-2 text-gray-700">
+                                <li><strong>Konnichiwa (こんにちは):</strong> Hello / Good afternoon</li>
+                                <li><strong>Arigato Gozaimasu (ありがとうございます):</strong> Thank you (formal)</li>
+                                <li><strong>Sumimasen (すみません):</strong> Excuse me / Sorry / Pardon me</li>
+                                <li><strong>Onegaishimasu (お願いします):</strong> Please (when requesting something)</li>
+                                <li><strong>Kore wa ikura desu ka? (これはいくらですか?):</strong> How much is this?</li>
+                                <li><strong>Eigo o hanasemasu ka? (英語を話せますか?):</strong> Do you speak English?</li>
+                                <li><strong>Oishii (美味しい):</strong> Delicious!</li>
+                                <li><strong>Kanpai! (乾杯!):</strong> Cheers!</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Money Matters</h4>
+                            <p class="text-gray-700">Japanese Yen (¥) is the currency. ATMs are widely available at convenience stores (Seven Bank, Japan Post Bank) and typically accept international cards. Credit cards are accepted in most hotels and major stores, but cash is essential for smaller shops, rural areas, and some local restaurants. Look for 'Tax-Free' (免稅) signs at stores; minimum purchase of ¥5,000 is required. Note: Tax-free rules are changing from Nov 2025, where VAT refund will happen at airport/designated points instead of in-store. (Current exchange rate: ~£1 = ¥198).</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-2">Connectivity & Apps</h4>
+                            <p class="text-gray-700">Stay connected with an eSIM (e.g., Airalo, Holafly) or a prepaid physical SIM card (e.g., Mobal, B-mobile). Portable Wi-Fi devices are also an option for multiple devices. Essential apps: Google Maps (for navigation), Google Translate (for language barriers), Japan Transit Planner or NAVITIME (for train routes/timetables), Tabelog/Gurunavi (for restaurants), Klook/Viator (for tours/activities).</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+    </script>
+</body>
+</html>
 
