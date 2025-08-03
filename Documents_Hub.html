@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Two-Month Adventure Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Coastal Calm -->
+    <!-- Application Structure Plan: The single-page design is now streamlined to focus solely on the "Master Document List" for efficiency. The header is simplified to a title. The core of the page is a comprehensive, filterable table. Filtering is now dual-layered, allowing users to filter by document category and by country using a new dropdown menu. This structure is highly task-oriented, prioritizing the quick retrieval of specific documents, which is the user's primary need during travel. -->
+    <!-- Visualization & Content Choices: 
+        1. Report Info: Master Document Checklist -> Goal: Organize/Track/Access -> Viz/Presentation: Enhanced Filterable HTML Table with new columns for dates and country -> Interaction: Click category buttons AND select country from dropdown to filter table rows -> Justification: The addition of dates and country columns, along with dual-filter functionality, transforms the table into a powerful, multi-dimensional search tool. It allows for highly specific queries (e.g., "show me all my transport bookings for Vietnam"), which is critical for a long trip with many documents. Implemented with HTML/JS.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+        .status-tag {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-confirmed { background-color: #d1fae5; color: #065f46; }
+        .status-pending { background-color: #fef3c7; color: #92400e; }
+        .status-tobook { background-color: #fee2e2; color: #991b1b; }
+        .status-scanned { background-color: #e0e7ff; color: #3730a3; }
+        .filter-btn.active { background-color: #007bff; color: white; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-4 flex justify-center items-center">
+            <div class="text-2xl font-bold text-gray-800">
+                <span class="text-blue-600">Travel</span>Hub
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="documents" class="py-16">
+            <div class="container mx-auto px-6">
+                <h2 class="text-3xl font-bold text-center text-gray-800 mb-2">Master Document List</h2>
+                <p class="text-center text-gray-600 mb-8 max-w-2xl mx-auto">The single source of truth for every important file. Use the filters to quickly find what you need. All links open in a new tab.</p>
+                
+                <div class="flex flex-col md:flex-row items-center justify-center gap-4 mb-8">
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button class="filter-btn active py-2 px-4 bg-gray-200 text-gray-700 rounded-full font-semibold text-sm transition-colors" data-filter="all">All</button>
+                        <button class="filter-btn py-2 px-4 bg-gray-200 text-gray-700 rounded-full font-semibold text-sm transition-colors" data-filter="identification">Identification</button>
+                        <button class="filter-btn py-2 px-4 bg-gray-200 text-gray-700 rounded-full font-semibold text-sm transition-colors" data-filter="health">Health & Safety</button>
+                        <button class="filter-btn py-2 px-4 bg-gray-200 text-gray-700 rounded-full font-semibold text-sm transition-colors" data-filter="transport">Transportation</button>
+                        <button class="filter-btn py-2 px-4 bg-gray-200 text-gray-700 rounded-full font-semibold text-sm transition-colors" data-filter="accommodation">Accommodation</button>
+                    </div>
+                    <select id="country-filter" class="py-2 px-4 bg-gray-200 text-gray-700 rounded-full font-semibold text-sm">
+                        <option value="all">All Countries</option>
+                        <option value="France">France</option>
+                        <option value="Italy">Italy</option>
+                        <option value="Greece">Greece</option>
+                        <option value="Thailand">Thailand</option>
+                        <option value="Vietnam">Vietnam</option>
+                        <option value="Indonesia">Indonesia</option>
+                    </select>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-xl overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                            <tr>
+                                <th scope="col" class="px-6 py-3">Document Type</th>
+                                <th scope="col" class="px-6 py-3">Description</th>
+                                <th scope="col" class="px-6 py-3">Dates</th>
+                                <th scope="col" class="px-6 py-3">Country</th>
+                                <th scope="col" class="px-6 py-3">Status</th>
+                                <th scope="col" class="px-6 py-3 text-center">Link</th>
+                            </tr>
+                        </thead>
+                        <tbody id="doc-table-body">
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="identification" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Passport</td>
+                                <td class="px-6 py-4">Primary ID, 6-month validity</td>
+                                <td class="px-6 py-4">N/A</td>
+                                <td class="px-6 py-4">All</td>
+                                <td class="px-6 py-4"><span class="status-tag status-scanned">Scanned & Linked</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="identification" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Passport (Digital Copy)</td>
+                                <td class="px-6 py-4">Digital scan of main ID page</td>
+                                <td class="px-6 py-4">N/A</td>
+                                <td class="px-6 py-4">All</td>
+                                <td class="px-6 py-4"><span class="status-tag status-scanned">Scanned & Linked</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-copy-1" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="identification" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Passport (Emergency Copy)</td>
+                                <td class="px-6 py-4">Backup copy for emergencies</td>
+                                <td class="px-6 py-4">N/A</td>
+                                <td class="px-6 py-4">All</td>
+                                <td class="px-6 py-4"><span class="status-tag status-scanned">Scanned & Linked</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-copy-2" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="identification" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Passport (Digital Scan)</td>
+                                <td class="px-6 py-4">Separate digital scan for visa applications</td>
+                                <td class="px-6 py-4">N/A</td>
+                                <td class="px-6 py-4">All</td>
+                                <td class="px-6 py-4"><span class="status-tag status-scanned">Scanned & Linked</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-copy-3" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="health" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Travel Insurance</td>
+                                <td class="px-6 py-4">Medical & emergency coverage</td>
+                                <td class="px-6 py-4">01/08/25 - 01/10/25</td>
+                                <td class="px-6 py-4">All</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="transport" data-country="France">
+                                <td class="px-6 py-4 font-medium text-gray-900">Flight Booking #1</td>
+                                <td class="px-6 py-4">Outbound flight to Paris</td>
+                                <td class="px-6 py-4">01/08/25</td>
+                                <td class="px-6 py-4">France</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-flight-1" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="transport" data-country="Greece">
+                                <td class="px-6 py-4 font-medium text-gray-900">Flight Booking #2</td>
+                                <td class="px-6 py-4">Flight to Greece</td>
+                                <td class="px-6 py-4">16/08/25</td>
+                                <td class="px-6 py-4">Greece</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-flight-2" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="transport" data-country="Thailand">
+                                <td class="px-6 py-4 font-medium text-gray-900">Flight Booking #3</td>
+                                <td class="px-6 py-4">Flight to Thailand</td>
+                                <td class="px-6 py-4">01/09/25</td>
+                                <td class="px-6 py-4">Thailand</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-flight-3" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="transport" data-country="Indonesia">
+                                <td class="px-6 py-4 font-medium text-gray-900">Flight Booking #4</td>
+                                <td class="px-6 py-4">Flight to Indonesia</td>
+                                <td class="px-6 py-4">01/10/25</td>
+                                <td class="px-6 py-4">Indonesia</td>
+                                <td class="px-6 py-4"><span class="status-tag status-tobook">To Book</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-flight-4" target="_blank" class="font-medium text-gray-400 cursor-not-allowed">View</a></td>
+                            </tr>
+                             <tr class="bg-white border-b hover:bg-gray-50" data-category="transport" data-country="Italy">
+                                <td class="px-6 py-4 font-medium text-gray-900">Train Booking</td>
+                                <td class="px-6 py-4">Overnight train to Rome</td>
+                                <td class="px-6 py-4">08/08/25</td>
+                                <td class="px-6 py-4">Italy</td>
+                                <td class="px-6 py-4"><span class="status-tag status-tobook">To Book</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link" target="_blank" class="font-medium text-gray-400 cursor-not-allowed">View</a></td>
+                            </tr>
+                             <tr class="bg-white border-b hover:bg-gray-50" data-category="accommodation" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Hotel Booking #1</td>
+                                <td class="px-6 py-4">Accommodation reservation</td>
+                                <td class="px-6 py-4">01/08/25 - 07/08/25</td>
+                                <td class="px-6 py-4">France</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-hotel-1" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="accommodation" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Hotel Booking #2</td>
+                                <td class="px-6 py-4">Accommodation reservation</td>
+                                <td class="px-6 py-4">08/08/25 - 15/08/25</td>
+                                <td class="px-6 py-4">Italy</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-hotel-2" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="accommodation" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Hotel Booking #3</td>
+                                <td class="px-6 py-4">Accommodation reservation</td>
+                                <td class="px-6 py-4">16/08/25 - 23/08/25</td>
+                                <td class="px-6 py-4">Greece</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-hotel-3" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="accommodation" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Hotel Booking #4</td>
+                                <td class="px-6 py-4">Accommodation reservation</td>
+                                <td class="px-6 py-4">24/08/25 - 31/08/25</td>
+                                <td class="px-6 py-4">Greece</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-hotel-4" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="accommodation" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Hotel Booking #5</td>
+                                <td class="px-6 py-4">Accommodation reservation</td>
+                                <td class="px-6 py-4">01/09/25 - 08/09/25</td>
+                                <td class="px-6 py-4">Thailand</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-hotel-5" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="accommodation" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Hotel Booking #6</td>
+                                <td class="px-6 py-4">Accommodation reservation</td>
+                                <td class="px-6 py-4">09/09/25 - 15/09/25</td>
+                                <td class="px-6 py-4">Thailand</td>
+                                <td class="px-6 py-4"><span class="status-tag status-tobook">To Book</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-hotel-6" target="_blank" class="font-medium text-gray-400 cursor-not-allowed">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="accommodation" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Hotel Booking #7</td>
+                                <td class="px-6 py-4">Accommodation reservation</td>
+                                <td class="px-6 py-4">16/09/25 - 22/09/25</td>
+                                <td class="px-6 py-4">Vietnam</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-hotel-7" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="accommodation" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Hotel Booking #8</td>
+                                <td class="px-6 py-4">Accommodation reservation</td>
+                                <td class="px-6 py-4">23/09/25 - 30/09/25</td>
+                                <td class="px-6 py-4">Vietnam</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-hotel-8" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="accommodation" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Hotel Booking #9</td>
+                                <td class="px-6 py-4">Accommodation reservation</td>
+                                <td class="px-6 py-4">01/10/25 - 08/10/25</td>
+                                <td class="px-6 py-4">Indonesia</td>
+                                <td class="px-6 py-4"><span class="status-tag status-tobook">To Book</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-hotel-9" target="_blank" class="font-medium text-gray-400 cursor-not-allowed">View</a></td>
+                            </tr>
+                            <tr class="bg-white hover:bg-gray-50" data-category="accommodation" data-country="all">
+                                <td class="px-6 py-4 font-medium text-gray-900">Hotel Booking #10</td>
+                                <td class="px-6 py-4">Accommodation reservation</td>
+                                <td class="px-6 py-4">09/10/25 - 15/10/25</td>
+                                <td class="px-6 py-4">Indonesia</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link-hotel-10" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                            <tr class="bg-white border-b hover:bg-gray-50" data-category="transport" data-country="Thailand">
+                                <td class="px-6 py-4 font-medium text-gray-900">Flight Confirmation</td>
+                                <td class="px-6 py-4">Flight to Bangkok</td>
+                                <td class="px-6 py-4">01/09/25</td>
+                                <td class="px-6 py-4">Thailand</td>
+                                <td class="px-6 py-4"><span class="status-tag status-confirmed">Confirmed</span></td>
+                                <td class="px-6 py-4 text-center"><a href="#your-dropbox-link" target="_blank" class="font-medium text-blue-600 hover:underline">View</a></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-gray-800 text-white">
+        <div class="container mx-auto px-6 py-8 text-center">
+            <p>&copy; 2025 Your Travel Blog. Adventure Awaits!</p>
+            <p class="text-sm text-gray-400 mt-2">This page was designed to keep our grand tour organized.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const countryFilter = document.getElementById('country-filter');
+            const tableRows = document.querySelectorAll('#doc-table-body tr');
+
+            const applyFilters = () => {
+                const activeCategory = document.querySelector('.filter-btn.active').dataset.filter;
+                const selectedCountry = countryFilter.value;
+                
+                tableRows.forEach(row => {
+                    const rowCategory = row.dataset.category;
+                    const rowCountry = row.dataset.country;
+                    
+                    const isCategoryMatch = activeCategory === 'all' || rowCategory === activeCategory;
+                    const isCountryMatch = selectedCountry === 'all' || rowCountry === selectedCountry;
+
+                    if (isCategoryMatch && isCountryMatch) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            };
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    applyFilters();
+                });
+            });
+
+            countryFilter.addEventListener('change', () => {
+                applyFilters();
+            });
+
+            applyFilters();
+        });
+    </script>
+
+</body>
+</html>
